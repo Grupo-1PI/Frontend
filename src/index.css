@@ -1,1 +1,11 @@
 @import "tailwindcss";
+
+@theme {
+  --color-background: #E7DEC9;
+  --color-background-secondary: #3B4538;
+  --color-accent: #000000;
+  --color-text-dark: #1A1A1A;
+
+  --font-shoulders: "Big Shoulders Display", sans-serif;
+  --font-lexend: "Lexend Deca", sans-serif;
+}
