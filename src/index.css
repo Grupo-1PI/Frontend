@@ -9,3 +9,48 @@
   --font-shoulders: "Big Shoulders Display", sans-serif;
   --font-lexend: "Lexend Deca", sans-serif;
 }
+
+@layer components {
+  .input-floating {
+    @apply w-full h-14 rounded-[10px] border border-[#3B4538] bg-white px-4 pt-4 text-base text-[#3B4538] outline-none transition-all placeholder-transparent;
+  }
+
+  .label-floating {
+    @apply absolute left-3 top-1/2 -translate-y-1/2 bg-white px-1 text-base text-[#6B7280] transition-all duration-200 pointer-events-none;
+  }
+
+  .peer:focus~.label-floating,
+  .peer:not(:placeholder-shown)~.label-floating {
+    @apply top-0 text-xs font-bold uppercase text-[#3B4538];
+  }
+
+  .btn-login {
+    cursor: pointer;
+    @apply bg-[#A1C089] hover:bg-[#4E6F35] transition text-white text-xs font-semibold uppercase tracking-wider px-10 py-3 rounded-lg;
+  }
+
+  .btn-toggle {
+    cursor: pointer;
+    @apply mt-6 border border-white px-10 py-3 rounded-lg uppercase text-xs font-semibold tracking-wider text-white hover:bg-white hover:text-[#4E6F35] transition;
+  }
+
+  .bg-login-grad {
+    background: linear-gradient(34.62deg,
+        #A1C089 0%,
+        #4E6F35 44.23%,
+        #A1C089 100%);
+  }
+
+  .hr-login {
+    @apply w-full h-px my-2 opacity-70;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        #3B4538 20%,
+        #3B4538 80%,
+        transparent 100%);
+  }
+
+  .input-floating:disabled {
+    @apply bg-gray-100 cursor-not-allowed opacity-80;
+  }
+}
