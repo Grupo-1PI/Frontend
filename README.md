@@ -70,4 +70,3 @@ docs: adiciona diagrama de arquitetura
 main → produção
 homologation → integração
 development → desenvolvimento
-```
