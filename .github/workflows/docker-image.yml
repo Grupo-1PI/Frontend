@@ -1,0 +1,49 @@
+name: Deploy Automático e Rollback
+
+on:
+  push:
+    branches:
+      - production # Roda automático no push
+  workflow_dispatch: # Cria o botão de Rollback Manual no painel do GitHub
+    inputs:
+      commit_sha:
+        description: 'SHA do Commit para fazer o Rollback (Ex: a1b2c3d)'
+        required: true
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Se for Rollback, ele baixa o commit antigo inserido no botão. Se for push normal, baixa o último da produção.
+      - name: Checkout Código
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.commit_sha || 'production' }}
+
+      # 2. Faz o login no Docker Hub
+      - name: Logar no Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 3. Define a Tag dinâmica (Usa o SHA digitado no rollback ou o SHA do push atual)
+      - name: Definir SHA de Destino
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "sha=${{ github.event.inputs.commit_sha }}" >> $GITHUB_OUTPUT
+          else
+            echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      # 4. Constrói e envia atualizando a tag :latest para a versão escolhida
+      - name: Build e Push da Imagem
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/tao-tenshin_front-end:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/tao-tenshin_front-end:${{ steps.vars.outputs.sha }}

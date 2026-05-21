@@ -237,7 +237,7 @@ function LoginCadastro({ initialMode = "login" }) {
   }
 
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center px-4">
+    <main className="min-h-screen bg-background flex items-center justify-center px-4 font-sans">
       <section className="relative w-[85vw] max-w-5xl h-160 bg-white rounded-[30px] shadow-2xl overflow-hidden">
         <div
           className={`
@@ -249,7 +249,7 @@ function LoginCadastro({ initialMode = "login" }) {
           `}
         >
           <form className="h-full flex flex-col items-center justify-center px-10">
-            <h1 className="text-4xl font-bold text-text-dark">
+            <h1 className="font-heading text-4xl font-bold text-text-dark">
               Criar Conta
             </h1>
 
@@ -432,7 +432,7 @@ function LoginCadastro({ initialMode = "login" }) {
           `}
         >
           <form className="h-full flex flex-col items-center justify-center px-10">
-            <h1 className="text-4xl font-bold text-text-dark">
+            <h1 className="font-heading text-4xl font-bold text-text-dark">
               Entrar
             </h1>
 
