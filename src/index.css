@@ -6,17 +6,46 @@
   --color-accent: #000000;
   --color-text-dark: #1A1A1A;
 
-  --font-shoulders: "Big Shoulders Display", sans-serif;
-  --font-lexend: "Lexend Deca", sans-serif;
+  --font-heading: "Plus Jakarta Sans", sans-serif;
+  --font-sans: "Inter", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply font-sans;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-heading;
+  }
 }
 
 @layer components {
+  .route-progress {
+    @apply fixed left-0 top-0 z-[9999] h-1 bg-[#4E6F35];
+    animation: route-progress 300ms ease-out both;
+  }
+
+  @keyframes route-progress {
+    from {
+      width: 0;
+      opacity: 0.75;
+    }
+
+    to {
+      width: 100%;
+      opacity: 1;
+    }
+  }
+
   .input-floating {
-    @apply w-full h-14 rounded-[10px] border border-[#3B4538] bg-white px-4 pt-4 text-base text-[#3B4538] outline-none transition-all placeholder-transparent;
+    @apply w-full h-14 rounded-[10px] border border-[#3B4538] bg-white px-4 pt-4 font-sans text-base text-[#3B4538] outline-none transition-all placeholder-transparent;
   }
 
   .label-floating {
-    @apply absolute left-3 top-1/2 -translate-y-1/2 bg-white px-1 text-base text-[#6B7280] transition-all duration-200 pointer-events-none;
+    @apply absolute left-3 top-1/2 -translate-y-1/2 bg-white px-1 font-sans text-base text-[#6B7280] transition-all duration-200 pointer-events-none;
   }
 
   .peer:focus~.label-floating,
@@ -26,12 +55,12 @@
 
   .btn-login {
     cursor: pointer;
-    @apply bg-[#A1C089] hover:bg-[#4E6F35] transition text-white text-xs font-semibold uppercase tracking-wider px-10 py-3 rounded-lg;
+    @apply bg-[#A1C089] hover:bg-[#4E6F35] transition font-sans text-white text-xs font-semibold uppercase tracking-wider px-10 py-3 rounded-lg;
   }
 
   .btn-toggle {
     cursor: pointer;
-    @apply mt-6 border border-white px-10 py-3 rounded-lg uppercase text-xs font-semibold tracking-wider text-white hover:bg-white hover:text-[#4E6F35] transition;
+    @apply mt-6 border border-white px-10 py-3 rounded-lg font-sans uppercase text-xs font-semibold tracking-wider text-white hover:bg-white hover:text-[#4E6F35] transition;
   }
 
   .bg-login-grad {
