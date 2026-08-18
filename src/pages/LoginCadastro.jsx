@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import CadastroForm from "../components/CadastroForm";
+import LoginForm from "../components/LoginForm";
 
 function onlyNumbers(value) {
   return value.replace(/\D/g, "");
@@ -19,39 +21,6 @@ function maskCep(value) {
   return onlyNumbers(value)
     .slice(0, 8)
     .replace(/(\d{5})(\d{0,3})/, "$1-$2");
-}
-
-function FloatingInput({
-  label,
-  type = "text",
-  name,
-  value,
-  onChange,
-  onBlur,
-  disabled = false,
-  error,
-}) {
-  return (
-    <div className="relative w-full">
-      <input
-        id={name}
-        name={name}
-        type={type}
-        value={value}
-        onChange={onChange}
-        onBlur={onBlur}
-        disabled={disabled}
-        placeholder=" "
-        className={`input-floating peer ${error ? "border-red-500" : ""}`}
-      />
-
-      <label htmlFor={name} className="label-floating">
-        {label}
-      </label>
-
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-    </div>
-  );
 }
 
 function LoginCadastro({ initialMode = "login" }) {
@@ -248,178 +217,20 @@ function LoginCadastro({ initialMode = "login" }) {
             }
           `}
         >
-          <form className="h-full flex flex-col items-center justify-center px-10">
-            <h1 className="font-heading text-4xl font-bold text-text-dark">
-              Criar Conta
-            </h1>
-
-            <span className="text-sm text-gray-500 mt-2">
-              {step === 1
-                ? "Preencha seus dados pessoais"
-                : "Agora informe seu endereço"}
-            </span>
-
-            <div className="flex items-center gap-2 mt-5">
-              <div className={`h-2 w-10 rounded-full ${step === 1 ? "bg-[#4E6F35]" : "bg-[#A1C089]"}`} />
-              <div className={`h-2 w-10 rounded-full ${step === 2 ? "bg-[#4E6F35]" : "bg-gray-300"}`} />
-            </div>
-
-            <div
-              ref={formScrollRef}
-              className="w-full max-h-96 overflow-y-auto pr-2 pt-2 mt-6 space-y-5"
-            >
-              {step === 1 && (
-                <>
-                  <FloatingInput
-                    name="nome"
-                    label="Nome completo"
-                    value={form.nome}
-                    onChange={handleChange}
-                    error={errors.nome}
-                  />
-
-                  <FloatingInput
-                    name="telefone"
-                    label="Telefone"
-                    value={form.telefone}
-                    onChange={handleChange}
-                    error={errors.telefone}
-                  />
-
-                  <FloatingInput
-                    name="dataNascimento"
-                    label="Data de nascimento"
-                    type="date"
-                    value={form.dataNascimento}
-                    onChange={handleChange}
-                    error={errors.dataNascimento}
-                  />
-
-                  <FloatingInput
-                    name="emailCadastro"
-                    label="E-mail"
-                    type="email"
-                    value={form.emailCadastro}
-                    onChange={handleChange}
-                    error={errors.emailCadastro}
-                  />
-
-                  <FloatingInput
-                    name="senhaCadastro"
-                    label="Senha"
-                    type="password"
-                    value={form.senhaCadastro}
-                    onChange={handleChange}
-                    error={errors.senhaCadastro}
-                  />
-
-                  <FloatingInput
-                    name="confirmarSenha"
-                    label="Confirmar senha"
-                    type="password"
-                    value={form.confirmarSenha}
-                    onChange={handleChange}
-                    error={errors.confirmarSenha}
-                  />
-                </>
-              )}
-
-              {step === 2 && (
-                <>
-                  <div className="grid grid-cols-[1fr_0.7fr] gap-6 w-full">
-                    <FloatingInput
-                      name="cep"
-                      label="CEP"
-                      value={form.cep}
-                      onChange={handleChange}
-                      onBlur={buscarCep}
-                      error={errors.cep}
-                    />
-
-                    <FloatingInput
-                      name="uf"
-                      label="UF"
-                      value={form.uf}
-                      onChange={handleChange}
-                      disabled
-                      error={errors.uf}
-                    />
-                  </div>
-
-                  <FloatingInput
-                    name="cidade"
-                    label="Cidade"
-                    value={form.cidade}
-                    onChange={handleChange}
-                    disabled
-                    error={errors.cidade}
-                  />
-
-                  <FloatingInput
-                    name="bairro"
-                    label="Bairro"
-                    value={form.bairro}
-                    onChange={handleChange}
-                    disabled
-                    error={errors.bairro}
-                  />
-
-                  <FloatingInput
-                    name="logradouro"
-                    label="Logradouro"
-                    value={form.logradouro}
-                    onChange={handleChange}
-                    disabled
-                    error={errors.logradouro}
-                  />
-
-                  <FloatingInput
-                    name="numero"
-                    label="Número"
-                    value={form.numero}
-                    onChange={handleChange}
-                    error={errors.numero}
-                  />
-
-                  <FloatingInput
-                    name="complemento"
-                    label="Complemento"
-                    value={form.complemento}
-                    onChange={handleChange}
-                  />
-                </>
-              )}
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              {step === 2 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStep(1);
-
-                    setTimeout(() => {
-                      formScrollRef.current?.scrollTo({
-                        top: 0,
-                        behavior: "smooth",
-                      });
-                    }, 50);
-                  }}
-                  className="btn-login bg-[#6B7280] hover:bg-[#4B5563]"
-                >
-                  Voltar
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={step === 1 ? handleContinuar : handleCadastro}
-                className="btn-login"
-              >
-                {step === 1 ? "Continuar" : "Finalizar"}
-              </button>
-            </div>
-          </form>
+          <CadastroForm
+            step={step}
+            form={form}
+            errors={errors}
+            formScrollRef={formScrollRef}
+            onChange={handleChange}
+            onCepBlur={buscarCep}
+            onContinue={handleContinuar}
+            onBack={() => {
+              setStep(1);
+              setTimeout(() => formScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" }), 50);
+            }}
+            onSubmit={handleCadastro}
+          />
         </div>
 
         <div
@@ -431,50 +242,7 @@ function LoginCadastro({ initialMode = "login" }) {
             }
           `}
         >
-          <form className="h-full flex flex-col items-center justify-center px-10">
-            <h1 className="font-heading text-4xl font-bold text-text-dark">
-              Entrar
-            </h1>
-
-            <span className="text-sm text-gray-500 mt-2">
-              Digite seu e-mail e senha para acessar
-            </span>
-
-            <div className="w-full mt-8 space-y-5">
-              <FloatingInput
-                name="emailLogin"
-                label="E-mail"
-                type="email"
-                value={form.emailLogin}
-                onChange={handleChange}
-                error={errors.emailLogin}
-              />
-
-              <FloatingInput
-                name="senhaLogin"
-                label="Senha"
-                type="password"
-                value={form.senhaLogin}
-                onChange={handleChange}
-                error={errors.senhaLogin}
-              />
-            </div>
-
-            <a
-              href="#"
-              className="text-sm text-gray-600 mt-4 hover:text-[#4E6F35] transition"
-            >
-              Esqueceu sua senha?
-            </a>
-
-            <button
-              type="button"
-              onClick={handleLogin}
-              className="btn-login mt-5"
-            >
-              Entrar
-            </button>
-          </form>
+          <LoginForm form={form} errors={errors} onChange={handleChange} onSubmit={handleLogin} />
         </div>
 
         <div
