@@ -338,6 +338,30 @@
       "fkFuncionario": "2",
       "fkServico": "2",
       "id": "TsTSHCpEciQ"
+    },
+    {
+      "data": "2026-08-31",
+      "hora_inicio": "11:00",
+      "hora_fim": "11:50",
+      "observacao": "",
+      "fkCliente": 1,
+      "fkSala": null,
+      "fkStatus": 1,
+      "fkFuncionario": "1",
+      "fkServico": "3",
+      "id": "RxK4ZPj_0PI"
+    },
+    {
+      "data": "2026-08-31",
+      "hora_inicio": "16:40",
+      "hora_fim": "17:30",
+      "observacao": "",
+      "fkCliente": 1,
+      "fkSala": null,
+      "fkStatus": 1,
+      "fkFuncionario": "1",
+      "fkServico": "3",
+      "id": "dWs71rSr2IM"
     }
   ],
   "status": [
