@@ -290,7 +290,7 @@ function LoginCadastro({ initialMode = "login" }) {
         </div>
 
         <Link
-          to="/"
+          to="/agendarConsulta"
           className={`
             absolute bottom-6 left-6 z-50 flex items-center gap-2 text-sm font-medium transition
             ${isRegister ? "text-white" : "text-gray-700"}

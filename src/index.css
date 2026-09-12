@@ -8,6 +8,20 @@
 
   --font-heading: "Plus Jakarta Sans", sans-serif;
   --font-sans: "Inter", sans-serif;
+  /* Cores de Marcas / Contexto Acupuntura */
+  --color-brand-primary: #2A382A;     /* Verde Musgo Escuro - Botões, Títulos e Headers */
+  --color-brand-primary-hover: #1E2F25;
+  --color-brand-bg: #F4F1EA;          /* Creme / Off-White - Fundo suave que evita fadiga visual */
+  --color-brand-surface: #FFFFFF;     /* Cards e Caixas brancas */
+  --color-brand-text: #1A251E;        /* Texto escuro com alto contraste */
+  --color-brand-muted: #556B5D;       /* Subtítulos e rótulos auxiliares */
+  --color-brand-border: #E2DED4;      /* Bordas suaves terrosas */
+
+  /* Status (Conectados à tabela 'status' e 'agendamento' do seu MySQL) */
+  --color-status-agendado: #2563EB;   /* Azul */
+  --color-status-confirmado: #16A34A; /* Verde */
+  --color-status-cancelado: #DC2626;  /* Vermelho */
+  --color-status-finalizado: #4B5563; /* Cinza */
 }
 
 @layer base {
