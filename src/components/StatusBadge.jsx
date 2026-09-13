@@ -1,18 +1,28 @@
-const ESTILOS_STATUS = {
-  1: { texto: "Agendado", classe: "bg-status-agendado/10 text-status-agendado" },
-  2: { texto: "Confirmado", classe: "bg-status-confirmado/10 text-status-confirmado" },
-  3: { texto: "Cancelado", classe: "bg-status-cancelado/10 text-status-cancelado" },
-  4: { texto: "Finalizado", classe: "bg-status-finalizado/10 text-status-finalizado" },
+const CLASSES_POR_STATUS = {
+  agendado: "bg-status-agendado/10 text-status-agendado",
+  confirmado: "bg-status-confirmado/10 text-status-confirmado",
+  cancelado: "bg-status-cancelado/10 text-status-cancelado",
+  finalizado: "bg-status-finalizado/10 text-status-finalizado",
 };
 
-function StatusBadge({ fkStatus }) {
-  const estilo = ESTILOS_STATUS[fkStatus] ?? ESTILOS_STATUS[1];
+/**
+ * Recebe o nome do status como veio da API (AgendamentoResponseDto.statusNome,
+ * ex.: "Agendado", "Confirmado"). Normaliza para minúsculo/sem acento para
+ * bater com as chaves acima independente de como o back-end formatar.
+ */
+function StatusBadge({ statusNome }) {
+  const chave = (statusNome || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const classe = CLASSES_POR_STATUS[chave] ?? "bg-brand-border text-brand-muted";
+
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${estilo.classe}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${classe}`}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {estilo.texto}
+      {statusNome || "—"}
     </span>
   );
 }

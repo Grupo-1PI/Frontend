@@ -1,160 +1,157 @@
 import { useEffect, useMemo, useState } from "react";
+import { MessageCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import Modal from "../components/Modal";
 import AgendaHeader from "../components/AgendaHeader";
 import Linha from "../components/Linha";
 import CardAgendamentoCliente from "../components/CardAgendamentoCliente";
 import { AbaNav } from "./AgendarConsulta";
-import { useAgendamentosData } from "../hooks/useAgendamentosData";
-import { todayISO, formatDateLong } from "../utils/agenda";
-import { XCircle } from "lucide-react";
-
-// TODO: substituir pelo cliente autenticado (contexto/sessão de login).
-const CLIENTE_LOGADO_ID = 1;
+import { getUsuarioLogado, logout } from "../services/auth";
+import { listarAgendamentosDoCliente } from "../services/agendamentos";
+import { todayISO, formatDateLong, remarcacaoBloqueada } from "../utils/agenda";
 
 export function MeusAgendamentos() {
-  const { data, error, atualizarStatusAgendamento } = useAgendamentosData();
+  const navigate = useNavigate();
+  const usuario = useMemo(() => getUsuarioLogado(), []);
 
-  const [servicos, setServicos] = useState(() => data.servicos);
-  const [salas, setSalas] = useState(() => data.salas);
-  const [funcionarios, setFuncionarios] = useState(() => data.funcionarios);
-  const [clientes, setClientes] = useState(() => data.clientes);
-  const [agendamentos, setAgendamentos] = useState(() => data.agendamentos);
+  const [agendamentos, setAgendamentos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [cancelamentoSelecionado, setCancelamentoSelecionado] = useState(null);
 
-  useEffect(() => {
-    setServicos(data.servicos);
-    setSalas(data.salas);
-    setFuncionarios(data.funcionarios);
-    setClientes(data.clientes);
-    setAgendamentos(data.agendamentos);
-  }, [data]);
+useEffect(() => {
+  if (!usuario) {
+    navigate("/login");
+    return;
+  }
 
-  const cliente = clientes.find((c) => c.id === CLIENTE_LOGADO_ID);
+  let ativo = true;
 
-  const [cancelamentoPendente, setCancelamentoPendente] = useState(null);
-  const [salvando, setSalvando] = useState(false);
+  setLoading(true);
 
-  const meusAgendamentos = useMemo(
+  listarAgendamentosDoCliente(usuario.clienteId)
+    .then((data) => {
+      if (ativo) setAgendamentos(data);
+    })
+    .catch((err) => {
+      if (ativo) setError(err);
+    })
+    .finally(() => {
+      if (ativo) setLoading(false);
+    });
+
+  return () => {
+    ativo = false;
+  };
+}, [usuario]);
+
+  const futuros = useMemo(
     () =>
       agendamentos
-        .filter((a) => a.fkCliente === CLIENTE_LOGADO_ID)
-        .sort((a, b) => (a.data + a.hora_inicio > b.data + b.hora_inicio ? -1 : 1)),
+        .filter((a) => a.dataHoraInicio >= todayISO() && (a.statusNome || "").toLowerCase() !== "cancelado")
+        .sort((a, b) => (a.dataHoraInicio > b.dataHoraInicio ? 1 : -1)),
     [agendamentos]
   );
 
-  const futuros = meusAgendamentos.filter(
-    (a) => a.data + "T" + a.hora_inicio >= todayISO() + "T00:00" && a.fkStatus !== 3
+  const passados = useMemo(
+    () =>
+      agendamentos
+        .filter((a) => !(a.dataHoraInicio >= todayISO()) || (a.statusNome || "").toLowerCase() === "cancelado")
+        .sort((a, b) => (a.dataHoraInicio < b.dataHoraInicio ? 1 : -1)),
+    [agendamentos]
   );
-  const passados = meusAgendamentos.filter(
-    (a) => !(a.data + "T" + a.hora_inicio >= todayISO() + "T00:00") || a.fkStatus === 3
-  );
-
-  function dadosApoio(agendamento) {
-    return {
-      servico: servicos.find((s) => s.id === agendamento.fkServico),
-      funcionario: funcionarios.find((f) => f.id === agendamento.fkFuncionario),
-      sala: salas.find((s) => s.id === agendamento.fkSala),
-    };
-  }
-
-  async function confirmarCancelamento() {
-    if (!cancelamentoPendente || salvando) return;
-    setSalvando(true);
-    try {
-      await atualizarStatusAgendamento(cancelamentoPendente.id, 3);
-      setCancelamentoPendente(null);
-    } finally {
-      setSalvando(false);
-    }
-  }
 
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-brand-bg px-6 text-center text-status-cancelado">
-        Não foi possível carregar os dados de agendamento. Verifique se o json-server está rodando.
+        Não foi possível carregar seus agendamentos. Verifique se a API está rodando.
       </div>
     );
   }
 
+  const bloqueado = cancelamentoSelecionado && remarcacaoBloqueada(cancelamentoSelecionado.dataHoraInicio);
+
   return (
     <div className="min-h-screen bg-brand-bg">
-      <AgendaHeader nome={cliente?.nome ?? "Paciente"} subtitulo="Área do paciente" onSair={() => {}} />
+      <AgendaHeader nome={usuario?.nome ?? "Paciente"} subtitulo="Área do paciente" onSair={async () => { await logout(); navigate("/login"); }} />
 
       <div className="mx-auto max-w-3xl px-5 pb-20 pt-7">
         <AbaNav ativa="meus" contadorFuturos={futuros.length} />
 
-        <div>
-          <h2 className="font-heading mb-3.5 text-lg font-semibold text-brand-text">Próximos agendamentos</h2>
-          {futuros.length === 0 ? (
-            <EmptyState texto="Você ainda não tem agendamentos futuros." />
-          ) : (
-            <div className="mb-9 flex flex-col gap-3">
-              {futuros.map((a) => (
-                <CardAgendamentoCliente
-                  key={a.id}
-                  agendamento={a}
-                  {...dadosApoio(a)}
-                  onCancelar={() => setCancelamentoPendente(a)}
-                />
-              ))}
-            </div>
-          )}
+        {loading ? (
+          <div className="py-10 text-center text-sm text-brand-muted">Carregando agendamentos...</div>
+        ) : (
+          <div>
+            <h2 className="font-heading mb-3.5 text-lg font-semibold text-brand-text">Próximos agendamentos</h2>
+            {futuros.length === 0 ? (
+              <EmptyState texto="Você ainda não tem agendamentos futuros." />
+            ) : (
+              <div className="mb-9 flex flex-col gap-3">
+                {futuros.map((a) => (
+                  <CardAgendamentoCliente key={a.id} agendamento={a} onCancelar={() => setCancelamentoSelecionado(a)} />
+                ))}
+              </div>
+            )}
 
-          <h2 className="font-heading mb-3.5 text-lg font-semibold text-brand-text">Histórico</h2>
-          {passados.length === 0 ? (
-            <EmptyState texto="Nenhum agendamento anterior." />
-          ) : (
-            <div className="flex flex-col gap-3">
-              {passados.map((a) => (
-                <CardAgendamentoCliente key={a.id} agendamento={a} {...dadosApoio(a)} historico />
-              ))}
-            </div>
-          )}
-        </div>
+            <h2 className="font-heading mb-3.5 text-lg font-semibold text-brand-text">Histórico</h2>
+            {passados.length === 0 ? (
+              <EmptyState texto="Nenhum agendamento anterior." />
+            ) : (
+              <div className="flex flex-col gap-3">
+                {passados.map((a) => (
+                  <CardAgendamentoCliente key={a.id} agendamento={a} historico />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Modal: confirmação de cancelamento */}
-      {cancelamentoPendente && (
-        <Modal onClose={() => setCancelamentoPendente(null)}>
+      {/* Modal: redirecionamento para WhatsApp ao tentar cancelar */}
+      {cancelamentoSelecionado && (
+        <Modal onClose={() => setCancelamentoSelecionado(null)}>
           <div className="mb-5 flex flex-col items-center text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-status-cancelado/10 text-status-cancelado">
-              <XCircle size={26} />
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-status-confirmado/10 text-status-confirmado">
+              <MessageCircle size={26} />
             </div>
-            <h3 className="font-heading text-lg font-semibold text-brand-text">Cancelar agendamento?</h3>
+            <h3 className="font-heading text-lg font-semibold text-brand-text">Cancelamento via WhatsApp</h3>
             <p className="mt-2 text-sm leading-relaxed text-brand-muted">
-              Você está prestes a cancelar esta consulta. Essa ação não pode ser desfeita e o horário voltará a ficar
-              disponível para outros pacientes.
+              Você está sendo direcionado para o WhatsApp da clínica para cancelar esta consulta. Nossa equipe vai te
+              ajudar por lá.
             </p>
           </div>
 
+          {bloqueado && (
+            <div className="mb-5 rounded-xl bg-amber-50 p-3 text-[12.5px] leading-relaxed text-amber-900">
+              Esta consulta está a menos de 1 dia de distância — cancelamentos e remarcações nesse prazo podem estar
+              sujeitos à cobrança da taxa de reserva. Fale com a clínica pelo WhatsApp para verificar.
+            </div>
+          )}
+
           <div className="mb-5 rounded-2xl bg-brand-bg p-4">
-            <Linha label="Procedimento" valor={servicos.find((s) => s.id === cancelamentoPendente.fkServico)?.nome} />
-            <Linha label="Data" valor={formatDateLong(cancelamentoPendente.data)} />
+            <Linha label="Data" valor={formatDateLong(cancelamentoSelecionado.dataHoraInicio.slice(0, 10))} />
             <Linha
               label="Horário"
-              valor={`${cancelamentoPendente.hora_inicio} – ${cancelamentoPendente.hora_fim}`}
+              valor={`${cancelamentoSelecionado.dataHoraInicio.slice(11, 16)} – ${cancelamentoSelecionado.dataHoraFim.slice(11, 16)}`}
             />
-            <Linha
-              label="Profissional"
-              valor={funcionarios.find((f) => f.id === cancelamentoPendente.fkFuncionario)?.nome}
-              last
-            />
+            <Linha label="Profissional" valor={cancelamentoSelecionado.funcionarios?.[0]} last />
           </div>
 
+          {/* TODO: trocar por <a href={`https://wa.me/55SEUNUMERO?text=...`}> quando o número da clínica for definido. */}
           <button
             type="button"
-            disabled={salvando}
-            onClick={confirmarCancelamento}
-            className="mb-2.5 w-full rounded-lg bg-status-cancelado py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+            onClick={() => setCancelamentoSelecionado(null)}
+            className="btn-login mb-2.5 flex w-full items-center justify-center gap-2"
           >
-            {salvando ? "Cancelando..." : "Sim, cancelar consulta"}
+            <MessageCircle size={16} /> Ir para o WhatsApp
           </button>
           <button
             type="button"
-            onClick={() => setCancelamentoPendente(null)}
+            onClick={() => setCancelamentoSelecionado(null)}
             className="w-full rounded-lg border border-brand-border py-3 text-sm font-semibold text-brand-text transition hover:bg-brand-bg"
           >
-            Manter agendamento
+            Voltar
           </button>
         </Modal>
       )}

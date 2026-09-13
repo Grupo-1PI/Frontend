@@ -1,5 +1,6 @@
-// Utilitários de data/horário usados pelo módulo de agendamentos.
-// Datas são sempre strings "yyyy-mm-dd"; horários "HH:mm".
+// Utilitários de data/horário e formatação. O CÁLCULO de disponibilidade
+// agora vem do back-end (services/agendamentos.js → /disponibilidade/*),
+// então este arquivo só cuida de datas e de regras que não dependem de agenda.
 
 export const MESES_PT = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -7,23 +8,6 @@ export const MESES_PT = [
 ];
 
 export const DIAS_SEMANA_PT = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
-
-export function toMin(hhmm) {
-  const [h, m] = hhmm.split(":").map(Number);
-  return h * 60 + m;
-}
-
-export function fromMin(min) {
-  const h = Math.floor(min / 60).toString().padStart(2, "0");
-  const m = (min % 60).toString().padStart(2, "0");
-  return `${h}:${m}`;
-}
-
-// dia_semana no padrão MySQL DAYOFWEEK: 1=Domingo ... 7=Sábado
-export function dayOfWeekMySQL(dateStr) {
-  const d = new Date(dateStr + "T00:00:00");
-  return d.getDay() + 1;
-}
 
 export function formatDateBR(dateStr) {
   const d = new Date(dateStr + "T00:00:00");
@@ -33,12 +17,6 @@ export function formatDateBR(dateStr) {
 export function formatDateLong(dateStr) {
   const d = new Date(dateStr + "T00:00:00");
   return d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
-}
-
-export function addDays(dateStr, n) {
-  const d = new Date(dateStr + "T00:00:00");
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
 }
 
 export function addMonths(dateStr, n) {
@@ -56,98 +34,60 @@ export function diasNoMes(dateStr) {
   return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
 }
 
-// Data "atual" fixada para manter a demo consistente com o db.json.
-// Troque por `new Date().toISOString().slice(0, 10)` quando for para produção.
 export function todayISO() {
-  return "2026-08-29";
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function mesAtualISO() {
+  return todayISO().slice(0, 7); // yyyy-MM, formato esperado por GET /disponibilidade/calendario
+}
+
+// Monta "yyyy-MM-ddTHH:mm:ss" (formato date-time do OpenAPI) a partir de data + hora "HH:mm".
+export function combinarDataHora(dataISO, horaHHmm) {
+  return `${dataISO}T${horaHHmm}:00`;
+}
+
+export function extrairData(dataHoraISO) {
+  return dataHoraISO.slice(0, 10);
+}
+
+export function extrairHora(dataHoraISO) {
+  return dataHoraISO.slice(11, 16);
 }
 
 /**
- * Calcula os horários livres de um funcionário em um dia, considerando:
- * - a agenda semanal fixa do funcionário (funcionario.agenda)
- * - exceções pontuais (folgas / horários extras) daquele dia
- * - agendamentos já existentes (que não estejam cancelados)
+ * O back-end retorna status como string livre (schema não documenta o enum
+ * exato). Normalizamos para comparação tolerante a acentos/maiúsculas.
+ * Ajuste os valores à esquerda se os nomes reais do back-end forem diferentes.
  */
-export function calcularSlotsLivres(funcionario, dataISO, duracaoMin, agendamentos, excecoes) {
-  if (!funcionario) return [];
-  const diaSemana = dayOfWeekMySQL(dataISO);
-  const excecao = (excecoes || []).find((e) => e.fkFuncionario === funcionario.id && e.data === dataISO);
-
-  let janelas = (funcionario.agenda || [])
-    .filter((a) => a.dia_semana === diaSemana)
-    .map((a) => ({ inicio: toMin(a.hora_inicio), fim: toMin(a.hora_fim) }));
-
-  if (excecao) {
-    if (excecao.hora_inicio === null && excecao.disponivel === false) {
-      janelas = [];
-    } else if (excecao.disponivel === false) {
-      const exIni = toMin(excecao.hora_inicio);
-      const exFim = toMin(excecao.hora_fim);
-      const novas = [];
-      janelas.forEach((j) => {
-        if (exFim <= j.inicio || exIni >= j.fim) {
-          novas.push(j);
-        } else {
-          if (exIni > j.inicio) novas.push({ inicio: j.inicio, fim: exIni });
-          if (exFim < j.fim) novas.push({ inicio: exFim, fim: j.fim });
-        }
-      });
-      janelas = novas;
-    } else if (excecao.disponivel === true) {
-      janelas.push({ inicio: toMin(excecao.hora_inicio), fim: toMin(excecao.hora_fim) });
-    }
-  }
-
-  const ocupados = (agendamentos || [])
-    .filter((a) => a.fkFuncionario === funcionario.id && a.data === dataISO && a.fkStatus !== 3)
-    .map((a) => ({ inicio: toMin(a.hora_inicio), fim: toMin(a.hora_fim) }));
-
-  const slots = [];
-  const passo = 20;
-  janelas.forEach((j) => {
-    for (let t = j.inicio; t + duracaoMin <= j.fim; t += passo) {
-      const fimSlot = t + duracaoMin;
-      const conflita = ocupados.some((o) => t < o.fim && fimSlot > o.inicio);
-      if (!conflita) slots.push({ inicio: fromMin(t), fim: fromMin(fimSlot) });
-    }
-  });
-  return slots;
-}
-
-export function salaDisponivelParaServico(sala, fkServico) {
-  return (sala.servicos || []).includes(fkServico);
-}
-
-export function primeiraSalaLivre(salas, fkServico, dataISO, horaInicio, horaFim, agendamentos) {
-  const salasValidas = salas.filter((s) => salaDisponivelParaServico(s, fkServico));
-  const ini = toMin(horaInicio);
-  const fim = toMin(horaFim);
-  for (const s of salasValidas) {
-    const ocupada = agendamentos.some(
-      (a) =>
-        a.fkSala === s.id &&
-        a.data === dataISO &&
-        a.fkStatus !== 3 &&
-        toMin(a.hora_inicio) < fim &&
-        toMin(a.hora_fim) > ini
-    );
-    if (!ocupada) return s.id;
-  }
-  return salasValidas[0]?.id ?? null;
+export function normalizarStatusDia(status) {
+  const s = (status || "").toUpperCase();
+  if (s.includes("INDISPON")) return "indisponivel";
+  if (s.includes("POUCA")) return "poucas";
+  if (s.includes("PASSAD")) return "passado";
+  if (s.includes("DISPON")) return "disponivel";
+  return "indisponivel";
 }
 
 /**
- * Classifica a disponibilidade agregada de um dia no calendário mensal,
- * somando os slots livres de todos os funcionários aptos.
- * Retorna: "passado" | "indisponivel" | "poucas" | "disponivel"
+ * Regra: só é possível remarcar/cancelar até 1 dia antes da consulta.
+ * Retorna true quando a janela de remarcação já está fechada.
  */
-export function classificarDiaCalendario(dataISO, funcionarios, duracaoMin, agendamentos, excecoes) {
-  if (dataISO < todayISO()) return "passado";
-  let total = 0;
-  funcionarios.forEach((f) => {
-    total += calcularSlotsLivres(f, dataISO, duracaoMin, agendamentos, excecoes).length;
-  });
-  if (total === 0) return "indisponivel";
-  if (total <= 2) return "poucas";
-  return "disponivel";
+export function remarcacaoBloqueada(dataHoraInicioISO) {
+  const agendamentoEm = new Date(dataHoraInicioISO);
+  const limite = new Date(agendamentoEm);
+  limite.setDate(limite.getDate() - 1);
+  return new Date() >= limite;
 }
+
+export const VALOR_RESERVA = 50;
+
+// IDs de status conhecidos, conforme seed do banco (tabela `status`).
+// Ajuste aqui se os IDs reais do back-end forem diferentes.
+export const STATUS_ID = {
+  AGENDADO: 1,
+  CONFIRMADO: 2,
+  CANCELADO: 3,
+  FINALIZADO: 4,
+};
+  
