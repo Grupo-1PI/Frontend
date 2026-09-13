@@ -8,7 +8,7 @@ import Linha from "../components/Linha";
 import StatusBadge from "../components/StatusBadge";
 import { useDadosBase } from "../hooks/useDadosBase";
 import { getUsuarioLogado, logout } from "../services/auth";
-import { listarAgendamentos, atualizarStatusAgendamento, listarExcecoesPorFuncionario } from "../services/agendamentos";
+import { listarAgendamentos, atualizarStatusAgendamento, atualizarAgendamento, listarExcecoesPorFuncionario } from "../services/agendamentos";
 import { formatDateLong, extrairHora, todayISO, STATUS_ID } from "../utils/agenda";
 
 function addDaysISO(dataISO, n) {
@@ -20,7 +20,7 @@ function addDaysISO(dataISO, n) {
 export function AgendaEquipe() {
   const navigate = useNavigate();
   const usuario = getUsuarioLogado();
-  const { funcionarios, status: statusLista } = useDadosBase();
+  const { funcionarios, servicos, salas, status: statusLista } = useDadosBase();
 
   useEffect(() => {
     if (!usuario) navigate("/login");
@@ -97,6 +97,17 @@ export function AgendaEquipe() {
     setSalvando(true);
     try {
       const atualizado = await atualizarStatusAgendamento(id, statusId);
+      setAgendamentosDoDia((prev) => prev.map((a) => (a.id === id ? atualizado : a)));
+      setAgendamentoAberto((cur) => (cur && cur.id === id ? atualizado : cur));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function atribuirDetalhes(id, { funcionarioId, salaId, servicoId }) {
+    setSalvando(true);
+    try {
+      const atualizado = await atualizarAgendamento(id, { funcionarioId, salaId, servicoId });
       setAgendamentosDoDia((prev) => prev.map((a) => (a.id === id ? atualizado : a)));
       setAgendamentoAberto((cur) => (cur && cur.id === id ? atualizado : cur));
     } finally {
@@ -266,9 +277,13 @@ export function AgendaEquipe() {
       {agendamentoAberto && (
         <ModalDetalheAgendamento
           agendamento={agendamentoAberto}
+          funcionarios={funcionarios}
+          servicos={servicos}
+          salas={salas}
           salvando={salvando}
           onFechar={() => setAgendamentoAberto(null)}
           onMudarStatus={mudarStatus}
+          onAtribuirDetalhes={atribuirDetalhes}
         />
       )}
     </div>
@@ -290,9 +305,18 @@ function StatusPill({ nome, contagem }) {
   );
 }
 
-function ModalDetalheAgendamento({ agendamento, salvando, onFechar, onMudarStatus }) {
+function ModalDetalheAgendamento({ agendamento, funcionarios, servicos, salas, salvando, onFechar, onMudarStatus, onAtribuirDetalhes }) {
   const statusAtual = (agendamento.statusNome || "").toLowerCase();
   const temServico = (agendamento.servicos || []).length > 0;
+  const temFuncionario = (agendamento.funcionarios || []).length > 0;
+  const temSala = !!agendamento.salaDescricao;
+  const precisaAtribuir = !temServico || !temFuncionario || !temSala;
+
+  const [funcionarioId, setFuncionarioId] = useState("");
+  const [salaId, setSalaId] = useState("");
+  const [servicoId, setServicoId] = useState("");
+
+  const podeConfirmarAtribuicao = funcionarioId && salaId && servicoId;
 
   return (
     <Modal onClose={onFechar}>
@@ -304,14 +328,66 @@ function ModalDetalheAgendamento({ agendamento, salvando, onFechar, onMudarStatu
       </div>
 
       <Linha label="Paciente" valor={agendamento.clienteNome} />
-      <Linha label="Profissional" valor={agendamento.funcionarios?.[0]} />
+      <Linha label="Profissional" valor={agendamento.funcionarios?.[0] ?? "A definir"} />
       <Linha label="Horário" valor={`${extrairHora(agendamento.dataHoraInicio)} – ${extrairHora(agendamento.dataHoraFim)}`} />
-      <Linha label="Sala" valor={agendamento.salaDescricao} />
+      <Linha label="Sala" valor={agendamento.salaDescricao ?? "A definir"} />
       {!temServico && <Linha label="Valor" valor="Taxa de reserva: R$ 50,00" last />}
 
       {agendamento.observacao && (
         <div className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-[12.5px] text-amber-800">
           <AlertCircle size={14} className="mt-0.5 flex-shrink-0" /> {agendamento.observacao}
+        </div>
+      )}
+
+      {precisaAtribuir && (
+        <div className="mt-4 rounded-xl border border-brand-border bg-brand-bg p-4">
+          <div className="mb-3 text-[13px] font-bold text-brand-text">Definir atendimento</div>
+          <div className="flex flex-col gap-2.5">
+            <select
+              value={servicoId}
+              onChange={(e) => setServicoId(e.target.value)}
+              className="rounded-lg border border-brand-border bg-brand-surface px-3 py-2 text-[13px] text-brand-text"
+            >
+              <option value="">Procedimento...</option>
+              {servicos.map((s) => (
+                <option key={s.id} value={s.id}>{s.nome}</option>
+              ))}
+            </select>
+            <select
+              value={funcionarioId}
+              onChange={(e) => setFuncionarioId(e.target.value)}
+              className="rounded-lg border border-brand-border bg-brand-surface px-3 py-2 text-[13px] text-brand-text"
+            >
+              <option value="">Profissional...</option>
+              {funcionarios.map((f) => (
+                <option key={f.id} value={f.id}>{f.nome}</option>
+              ))}
+            </select>
+            <select
+              value={salaId}
+              onChange={(e) => setSalaId(e.target.value)}
+              className="rounded-lg border border-brand-border bg-brand-surface px-3 py-2 text-[13px] text-brand-text"
+            >
+              <option value="">Sala...</option>
+              {salas.map((s) => (
+                <option key={s.id} value={s.id}>{s.descricao}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            disabled={!podeConfirmarAtribuicao || salvando}
+            onClick={() =>
+              onAtribuirDetalhes(agendamento.id, {
+                funcionarioId: Number(funcionarioId),
+                salaId: Number(salaId),
+                servicoId: Number(servicoId),
+              })
+            }
+            className="mt-3 w-full rounded-lg bg-brand-primary py-2.5 text-[13px] font-semibold text-white transition hover:bg-brand-primary-hover disabled:opacity-50"
+          >
+            {salvando ? "Salvando..." : "Salvar atendimento"}
+          </button>
         </div>
       )}
 

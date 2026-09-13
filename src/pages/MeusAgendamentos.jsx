@@ -20,31 +20,31 @@ export function MeusAgendamentos() {
   const [error, setError] = useState(null);
   const [cancelamentoSelecionado, setCancelamentoSelecionado] = useState(null);
 
-useEffect(() => {
-  if (!usuario) {
-    navigate("/login");
-    return;
-  }
+  useEffect(() => {
+    if (!usuario) {
+      navigate("/login");
+      return;
+    }
 
-  let ativo = true;
+    let ativo = true;
 
-  setLoading(true);
+    setLoading(true);
 
-  listarAgendamentosDoCliente(usuario.clienteId)
-    .then((data) => {
-      if (ativo) setAgendamentos(data);
-    })
-    .catch((err) => {
-      if (ativo) setError(err);
-    })
-    .finally(() => {
-      if (ativo) setLoading(false);
-    });
+    listarAgendamentosDoCliente(usuario.clienteId)
+      .then((data) => {
+        if (ativo) setAgendamentos(data);
+      })
+      .catch((err) => {
+        if (ativo) setError(err);
+      })
+      .finally(() => {
+        if (ativo) setLoading(false);
+      });
 
-  return () => {
-    ativo = false;
-  };
-}, [usuario]);
+    return () => {
+      ativo = false;
+    };
+  }, [usuario]);
 
   const futuros = useMemo(
     () =>
@@ -138,14 +138,23 @@ useEffect(() => {
             <Linha label="Profissional" valor={cancelamentoSelecionado.funcionarios?.[0]} last />
           </div>
 
-          {/* TODO: trocar por <a href={`https://wa.me/55SEUNUMERO?text=...`}> quando o número da clínica for definido. */}
-          <button
-            type="button"
-            onClick={() => setCancelamentoSelecionado(null)}
+          <a
+            href={`https://wa.me/11948253319?text=${encodeURIComponent(
+              `Olá! Tudo bem? 😊
+
+                Gostaria de solicitar o cancelamento da minha consulta.
+
+                📅 Data: ${formatDateLong(cancelamentoSelecionado.dataHoraInicio.slice(0, 10))}
+                ⏰ Horário: ${cancelamentoSelecionado.dataHoraInicio.slice(11, 16)} – ${cancelamentoSelecionado.dataHoraFim.slice(11, 16)}
+
+                Poderiam me ajudar com isso, por favor? Obrigada!`
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="btn-login mb-2.5 flex w-full items-center justify-center gap-2"
           >
             <MessageCircle size={16} /> Ir para o WhatsApp
-          </button>
+          </a>
           <button
             type="button"
             onClick={() => setCancelamentoSelecionado(null)}

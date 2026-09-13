@@ -7,7 +7,6 @@ import AgendaHeader from "../components/AgendaHeader";
 import Secao from "../components/Secao";
 import Linha from "../components/Linha";
 import CalendarioMensal from "../components/CalendarioMensal";
-import { useDadosBase } from "../hooks/useDadosBase";
 import { getUsuarioLogado, logout } from "../services/auth";
 import { consultarHorarios, criarAgendamento } from "../services/agendamentos";
 import { primeiroDiaDoMes, todayISO, combinarDataHora, formatDateLong, VALOR_RESERVA } from "../utils/agenda";
@@ -15,9 +14,7 @@ import { primeiroDiaDoMes, todayISO, combinarDataHora, formatDateLong, VALOR_RES
 export function AgendarConsulta() {
   const navigate = useNavigate();
   const usuario = getUsuarioLogado();
-  const { funcionarios, salas, loading: carregandoBase, error: erroBase } = useDadosBase();
 
-  const [funcionarioSel, setFuncionarioSel] = useState(null);
   const [dataSel, setDataSel] = useState(null);
   const [mesRef, setMesRef] = useState(primeiroDiaDoMes(todayISO()));
   const [horarios, setHorarios] = useState([]);
@@ -56,7 +53,6 @@ export function AgendarConsulta() {
   }, [dataSel]);
 
   function resetFluxo() {
-    setFuncionarioSel(null);
     setHorarioSel(null);
     setDataSel(null);
     setMesRef(primeiroDiaDoMes(todayISO()));
@@ -68,25 +64,25 @@ export function AgendarConsulta() {
   }
 
   async function confirmarReserva() {
-    if (!horarioSel || !funcionarioSel || salvando) return;
+    if (!horarioSel || salvando) return;
     setSalvando(true);
     setErroReserva(null);
     try {
       // Duração padrão de 1h para o bloco de reserva — o procedimento real
-      // (e portanto a duração final) é definido pela clínica depois.
+      // (e portanto a duração final) é definido pela clínica depois, junto
+      // com o profissional e a sala que vão atender.
       const [h, m] = horarioSel.split(":").map(Number);
       const fimMin = h * 60 + m + 60;
       const horaFim = `${String(Math.floor(fimMin / 60)).padStart(2, "0")}:${String(fimMin % 60).padStart(2, "0")}`;
-
-      const salaId = salas[0]?.id; // a clínica reatribui a sala se necessário, ao definir o serviço
 
       const novo = await criarAgendamento({
         dataHoraInicio: combinarDataHora(dataSel, horarioSel),
         dataHoraFim: combinarDataHora(dataSel, horaFim),
         observacao: observacaoInput,
         clienteId: usuario.clienteId,
-        funcionarioId: funcionarioSel,
-        salaId,
+        funcionarioId: 1,
+        salaId: 1,
+        servicoId: 1,
       });
       setConfirmado(novo);
       setModalHorarios(false);
@@ -102,16 +98,6 @@ export function AgendarConsulta() {
     }
   }
 
-  if (erroBase) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-brand-bg px-6 text-center text-status-cancelado">
-        Não foi possível carregar os dados da clínica. Verifique se a API está rodando em {import.meta.env.VITE_API_URL || "http://localhost:8080"}.
-      </div>
-    );
-  }
-
-  console.log("PAYLOAD:", criarAgendamento);
-
   return (
     <div className="min-h-screen bg-brand-bg">
       <AgendaHeader nome={usuario?.nome ?? "Paciente"} subtitulo="Área do paciente" onSair={async () => { await logout(); navigate("/login"); }} />
@@ -122,50 +108,25 @@ export function AgendarConsulta() {
         <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
           <Info size={18} className="mt-0.5 flex-shrink-0" />
           <p className="text-[13.5px] leading-relaxed">
-            A reserva do horário tem uma taxa de <strong>R$ {VALOR_RESERVA}</strong>, e o procedimento será definido
-            pela clínica de acordo com sua avaliação. Remarcações só podem ser feitas até{" "}
-            <strong>1 dia antes</strong> da consulta.
+            A reserva do horário tem uma taxa de <strong>R$ {VALOR_RESERVA}</strong>. O profissional e o procedimento
+            serão definidos pela clínica conforme a disponibilidade e sua avaliação. Remarcações só podem ser feitas
+            até <strong>1 dia antes</strong> da consulta.
           </p>
         </div>
 
         <div>
-          <Secao numero={1} titulo="Escolha um profissional">
-            {carregandoBase ? (
-              <div className="text-sm text-brand-muted">Carregando profissionais...</div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {funcionarios.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => { setFuncionarioSel(f.id); setHorarioSel(null); setDataSel(null); }}
-                    className={`rounded-full border px-4 py-2 text-[13.5px] font-semibold transition ${
-                      funcionarioSel === f.id
-                        ? "border-brand-primary bg-brand-primary/10 text-brand-text"
-                        : "border-brand-border bg-brand-surface text-brand-muted"
-                    }`}
-                  >
-                    {f.nome}
-                  </button>
-                ))}
-              </div>
-            )}
+          <Secao numero={1} titulo="Escolha um dia disponível no calendário">
+            <CalendarioMensal
+              mesRef={mesRef}
+              onMudarMes={setMesRef}
+              dataSel={dataSel}
+              onSelecionarDia={(d) => {
+                setDataSel(d);
+                setHorarioSel(null);
+                setModalHorarios(true);
+              }}
+            />
           </Secao>
-
-          {funcionarioSel && (
-            <Secao numero={2} titulo="Escolha um dia disponível no calendário">
-              <CalendarioMensal
-                mesRef={mesRef}
-                onMudarMes={setMesRef}
-                dataSel={dataSel}
-                onSelecionarDia={(d) => {
-                  setDataSel(d);
-                  setHorarioSel(null);
-                  setModalHorarios(true);
-                }}
-              />
-            </Secao>
-          )}
         </div>
       </div>
 
@@ -251,7 +212,8 @@ export function AgendarConsulta() {
             <div>
               <h3 className="font-heading text-lg font-semibold text-brand-text">Horário reservado com sucesso</h3>
               <p className="mt-1 text-[13.5px] leading-relaxed text-brand-muted">
-                Sua reserva foi registrada. A clínica entrará em contato para confirmar o procedimento antes da sua sessão.
+                Sua reserva foi registrada. A clínica vai definir o profissional e o procedimento e entrará em contato
+                antes da sua sessão.
               </p>
             </div>
           </div>
@@ -263,8 +225,6 @@ export function AgendarConsulta() {
               label="Horário"
               valor={`${confirmado.dataHoraInicio?.slice(11, 16)} – ${confirmado.dataHoraFim?.slice(11, 16)}`}
             />
-            <Linha label="Profissional" valor={confirmado.funcionarios?.[0]} />
-            <Linha label="Local" valor={confirmado.salaDescricao} />
             <Linha label="Taxa de reserva" valor={`R$ ${VALOR_RESERVA.toFixed(2)}`} last />
           </div>
 

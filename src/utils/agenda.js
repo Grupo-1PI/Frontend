@@ -90,4 +90,3 @@ export const STATUS_ID = {
   CANCELADO: 3,
   FINALIZADO: 4,
 };
-  
