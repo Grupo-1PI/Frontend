@@ -1,28 +1,42 @@
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import {
-  MESES_PT,
-  DIAS_SEMANA_PT,
-  addMonths,
-  primeiroDiaDoMes,
-  diasNoMes,
-  classificarDiaCalendario,
-} from "../utils/agenda";
+import { MESES_PT, DIAS_SEMANA_PT, addMonths, primeiroDiaDoMes, diasNoMes, normalizarStatusDia } from "../utils/agenda";
+import { consultarCalendario } from "../services/agendamentos";
 
 /**
- * Calendário mensal de seleção de dia, com legenda de disponibilidade.
- * A disponibilidade de cada dia é calculada a partir dos funcionários aptos
- * ao serviço escolhido (soma dos horários livres de todos eles).
+ * Calendário mensal de seleção de dia. A disponibilidade de cada dia vem
+ * do back-end (GET /disponibilidade/calendario?mes=yyyy-MM) — este
+ * componente não calcula nada, só busca e exibe.
  */
-function CalendarioMensal({
-  mesRef,
-  onMudarMes,
-  dataSel,
-  onSelecionarDia,
-  funcionarios,
-  duracaoMin,
-  agendamentos,
-  excecoes,
-}) {
+function CalendarioMensal({ mesRef, onMudarMes, dataSel, onSelecionarDia }) {
+  const [statusPorDia, setStatusPorDia] = useState({});
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState(null);
+
+  useEffect(() => {
+    let cancelado = false;
+    setCarregando(true);
+    setErro(null);
+    consultarCalendario(mesRef.slice(0, 7))
+      .then((dias) => {
+        if (cancelado) return;
+        const mapa = {};
+        (dias || []).forEach((d) => {
+          mapa[d.data] = normalizarStatusDia(d.status);
+        });
+        setStatusPorDia(mapa);
+      })
+      .catch((err) => {
+        if (!cancelado) setErro(err);
+      })
+      .finally(() => {
+        if (!cancelado) setCarregando(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [mesRef]);
+
   const primeiroDia = primeiroDiaDoMes(mesRef);
   const offsetSemana = new Date(primeiroDia + "T00:00:00").getDay(); // 0=Dom
   const totalDias = diasNoMes(mesRef);
@@ -57,6 +71,12 @@ function CalendarioMensal({
         </button>
       </div>
 
+      {erro && (
+        <div className="mb-4 rounded-lg bg-status-cancelado/10 p-3 text-xs text-status-cancelado">
+          Não foi possível carregar a disponibilidade deste mês.
+        </div>
+      )}
+
       <div className="mb-1 grid grid-cols-7 gap-1">
         {DIAS_SEMANA_PT.map((dw) => (
           <div key={dw} className="py-1 text-center text-[11px] font-bold text-brand-muted">
@@ -65,14 +85,14 @@ function CalendarioMensal({
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      <div className={`grid grid-cols-7 gap-1 ${carregando ? "opacity-50" : ""}`}>
         {celulas.map((dataISO, i) => {
           if (!dataISO) return <div key={`vazio-${i}`} />;
 
-          const status = classificarDiaCalendario(dataISO, funcionarios, duracaoMin, agendamentos, excecoes);
+          const status = statusPorDia[dataISO] ?? "indisponivel";
           const isSel = dataISO === dataSel;
           const diaNum = Number(dataISO.slice(8, 10));
-          const desabilitado = status === "passado" || status === "indisponivel";
+          const desabilitado = carregando || status === "passado" || status === "indisponivel";
 
           const classeBase =
             "relative aspect-square rounded-xl text-sm font-semibold transition flex items-center justify-center";

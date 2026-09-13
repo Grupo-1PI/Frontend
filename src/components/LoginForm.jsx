@@ -1,6 +1,6 @@
 import FloatingInput from "./FloatingInput";
 
-function LoginForm({ form, errors, onChange, onSubmit }) {
+function LoginForm({ form, errors, onChange, onSubmit, enviando = false }) {
   return (
     <form className="h-full flex flex-col items-center justify-center px-10">
       <h1 className="font-heading text-4xl font-bold text-text-dark">Entrar</h1>
@@ -16,7 +16,9 @@ function LoginForm({ form, errors, onChange, onSubmit }) {
       <a href="#" className="text-sm text-gray-600 mt-4 hover:text-[#4E6F35] transition">
         Esqueceu sua senha?
       </a>
-      <button type="button" onClick={onSubmit} className="btn-login mt-5">Entrar</button>
+      <button type="button" disabled={enviando} onClick={onSubmit} className="btn-login mt-5 disabled:opacity-60">
+        {enviando ? "Entrando..." : "Entrar"}
+      </button>
     </form>
   );
 }

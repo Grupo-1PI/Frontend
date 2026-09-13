@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import CadastroForm from "../components/CadastroForm";
 import LoginForm from "../components/LoginForm";
+import { login, cadastrar } from "../services/auth";
 
 function onlyNumbers(value) {
   return value.replace(/\D/g, "");
@@ -24,9 +25,12 @@ function maskCep(value) {
 }
 
 function LoginCadastro({ initialMode = "login" }) {
+  const navigate = useNavigate();
   const [isRegister, setIsRegister] = useState(initialMode === "register");
   const [step, setStep] = useState(1);
   const formScrollRef = useRef(null);
+  const [enviando, setEnviando] = useState(false);
+  const [erroGeral, setErroGeral] = useState(null);
 
   const [form, setForm] = useState({
     nome: "",
@@ -163,51 +167,90 @@ function LoginCadastro({ initialMode = "login" }) {
     }));
   }
 
-  function handleCadastro() {
-    if (!validarEtapa2()) return;
+  async function handleCadastro() {
+    if (!validarEtapa2() || enviando) return;
+    setEnviando(true);
+    setErroGeral(null);
 
-    const dadosCadastro = {
+    // Schema "Usuario - Criação": nome, telefone, email, senha, dataNascimento, endereco{...}
+    const payload = {
       nome: form.nome,
       email: form.emailCadastro,
-      telefone: form.telefone,
+      telefone: onlyNumbers(form.telefone),
       dataNascimento: form.dataNascimento,
       senha: form.senhaCadastro,
-      cep: form.cep,
-      uf: form.uf,
-      cidade: form.cidade,
-      bairro: form.bairro,
-      logradouro: form.logradouro,
-      numero: form.numero,
-      complemento: form.complemento,
+      endereco: {
+        cep: onlyNumbers(form.cep),
+        uf: form.uf,
+        cidade: form.cidade,
+        bairro: form.bairro,
+        logradouro: form.logradouro,
+        numero: form.numero,
+        complemento: form.complemento || null,
+      },
     };
 
-    console.log("Cadastro válido:", dadosCadastro);
+    try {
+      await cadastrar(payload);
+      // Após cadastrar, loga automaticamente com as credenciais recém-criadas.
+      await login(form.emailCadastro, form.senhaCadastro);
+      navigate("/agendarConsulta");
+    } catch (err) {
+      setErroGeral(
+        err.response?.status === 400
+          ? "Não foi possível concluir o cadastro. Confira os dados informados."
+          : "Erro ao cadastrar. Tente novamente em instantes."
+      );
+    } finally {
+      setEnviando(false);
+    }
   }
 
-  function handleLogin() {
-    if (!validarLogin()) return;
+  async function handleLogin() {
+    if (!validarLogin() || enviando) return;
+    setEnviando(true);
+    setErroGeral(null);
 
-    console.log("Login válido:", {
-      email: form.emailLogin,
-      senha: form.senhaLogin,
-    });
+    try {
+      const sessao = await login(form.emailLogin, form.senhaLogin);
+      // "Usuário - Token" traz tipo (ex.: "CLIENTE"/"FUNCIONARIO"), clienteId e funcionarioId.
+      if (sessao.tipo === "FUNCIONARIO" || sessao.funcionarioId) {
+        navigate("/agendaEquipe");
+      } else {
+        navigate("/agendarConsulta");
+      }
+    } catch (err) {
+      setErroGeral(
+        err.response?.status === 400 ? "E-mail ou senha inválidos." : "Erro ao entrar. Tente novamente em instantes."
+      );
+    } finally {
+      setEnviando(false);
+    }
   }
 
   function abrirCadastro() {
     setIsRegister(true);
     setStep(1);
     setErrors({});
+    setErroGeral(null);
   }
 
   function abrirLogin() {
     setIsRegister(false);
     setStep(1);
     setErrors({});
+    setErroGeral(null);
   }
 
   return (
     <main className="min-h-screen bg-background flex items-center justify-center px-4 font-sans">
       <section className="relative w-[85vw] max-w-5xl h-160 bg-white rounded-[30px] shadow-2xl overflow-hidden">
+        {erroGeral && (
+          <div className="absolute top-4 left-1/2 z-50 w-[90%] max-w-sm -translate-x-1/2 rounded-lg bg-status-cancelado/10 px-4 py-2.5 text-center text-sm font-medium text-status-cancelado">
+            {erroGeral}
+          </div>
+        )}
+
         <div
           className={`
             absolute top-0 left-0 w-1/2 h-full transition-all duration-700 ease-in-out
@@ -230,6 +273,7 @@ function LoginCadastro({ initialMode = "login" }) {
               setTimeout(() => formScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" }), 50);
             }}
             onSubmit={handleCadastro}
+            enviando={enviando}
           />
         </div>
 
@@ -242,7 +286,7 @@ function LoginCadastro({ initialMode = "login" }) {
             }
           `}
         >
-          <LoginForm form={form} errors={errors} onChange={handleChange} onSubmit={handleLogin} />
+          <LoginForm form={form} errors={errors} onChange={handleChange} onSubmit={handleLogin} enviando={enviando} />
         </div>
 
         <div
@@ -290,7 +334,7 @@ function LoginCadastro({ initialMode = "login" }) {
         </div>
 
         <Link
-          to="/agendarConsulta"
+          to="/"
           className={`
             absolute bottom-6 left-6 z-50 flex items-center gap-2 text-sm font-medium transition
             ${isRegister ? "text-white" : "text-gray-700"}
