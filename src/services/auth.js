@@ -12,9 +12,6 @@ export async function login(email, senha) {
   const { data } = await api.post("/usuarios/login", { email, senha });
   // O back-end também seta um cookie HTTP-only; guardamos uma cópia acessível
   // via JS para o interceptor do axios anexar o header Authorization.
-  if (data.token) {
-    localStorage.setItem(TOKEN_KEY, data.token);
-  }
   localStorage.setItem(USUARIO_KEY, JSON.stringify(data));
   return data;
 }
