@@ -92,7 +92,8 @@ function CalendarioMensal({ mesRef, onMudarMes, dataSel, onSelecionarDia }) {
           const status = statusPorDia[dataISO] ?? "indisponivel";
           const isSel = dataISO === dataSel;
           const diaNum = Number(dataISO.slice(8, 10));
-          const desabilitado = carregando || status === "passado" || status === "indisponivel";
+          const hojeISO = new Date().toISOString().slice(0, 10);
+          const desabilitado = carregando || status === "passado" || status === "indisponivel" || dataISO <= hojeISO;
 
           const classeBase =
             "relative aspect-square rounded-xl text-sm font-semibold transition flex items-center justify-center";

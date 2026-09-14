@@ -54,7 +54,7 @@ export async function listarAgendamentos({ inicio, fim, statusId } = {}) {
  * servicoId é opcional: o cliente reserva só o horário, a clínica define o
  * serviço depois (via atualizarAgendamento). statusId 1 = "Agendado".
  */
-export async function criarAgendamento({ dataHoraInicio, dataHoraFim, observacao, clienteId, funcionarioId, salaId, statusId = 1 }) {
+export async function criarAgendamento({ dataHoraInicio, dataHoraFim, observacao, clienteId, funcionarioId, salaId, servicoId, statusId = 5 }) {
   const { data } = await api.post("/agendamentos", {
     dataHoraInicio,
     dataHoraFim,
@@ -62,6 +62,7 @@ export async function criarAgendamento({ dataHoraInicio, dataHoraFim, observacao
     clienteId,
     funcionarioId,
     salaId,
+    servicoId,
     statusId,
   });
   return data;
