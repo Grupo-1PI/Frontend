@@ -10,6 +10,7 @@ function CadastroForm({
   onContinue,
   onBack,
   onSubmit,
+  enviando = false,
 }) {
   return (
     <form className="h-full flex flex-col items-center justify-center px-10">
@@ -53,8 +54,8 @@ function CadastroForm({
 
       <div className="flex gap-3 mt-6">
         {step === 2 && <button type="button" onClick={onBack} className="btn-login bg-[#6B7280] hover:bg-[#4B5563]">Voltar</button>}
-        <button type="button" onClick={step === 1 ? onContinue : onSubmit} className="btn-login">
-          {step === 1 ? "Continuar" : "Finalizar"}
+        <button type="button" disabled={enviando} onClick={step === 1 ? onContinue : onSubmit} className="btn-login disabled:opacity-60">
+          {step === 1 ? "Continuar" : enviando ? "Enviando..." : "Finalizar"}
         </button>
       </div>
     </form>
