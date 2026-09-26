@@ -16,11 +16,9 @@ export function AgendarConsulta() {
   const usuario = getUsuarioLogado();
 
   const [dataSel, setDataSel] = useState(null);
-  const [servicos, setServicos] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
   const [servicoSel, setServicoSel] = useState(null);
   const [funcionarioSel, setFuncionarioSel] = useState(null);
-  const [carregandoServicos, setCarregandoServicos] = useState(true);
   const [carregandoFuncionarios, setCarregandoFuncionarios] = useState(false);
   const [mesRef, setMesRef] = useState(primeiroDiaDoMes(todayISO()));
   const [horarios, setHorarios] = useState([]);
@@ -39,7 +37,13 @@ export function AgendarConsulta() {
   }, [usuario, navigate]);
 
   useEffect(() => {
-    listarServicos().then(setServicos).finally(() => setCarregandoServicos(false));
+    listarServicos()
+      .then((res) => {
+        const acupuntura = (res || []).find((s) => s.nome.toLowerCase().includes("acupuntura")) || res?.[0];
+        if (acupuntura) {
+          setServicoSel(acupuntura);
+        }
+      });
   }, []);
 
   useEffect(() => {
@@ -136,21 +140,16 @@ export function AgendarConsulta() {
         </div>
 
         <div className="space-y-6">
-          <Secao numero={1} titulo="Escolha o serviço">
-            {carregandoServicos ? <p className="text-sm text-brand-muted">Carregando serviços...</p> : (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {servicos.map((servico) => (
-                  <button key={servico.id} type="button" onClick={() => setServicoSel(servico)} className={`rounded-xl border p-3 text-left ${servicoSel?.id === servico.id ? "border-brand-primary bg-brand-primary/5" : "border-brand-border"}`}>
-                    <div className="font-semibold text-brand-text">{servico.nome}</div>
-                    <div className="text-xs text-brand-muted">{servico.tempoMedio} min</div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </Secao>
+          <div className="rounded-2xl border border-brand-border bg-brand-surface p-4 flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-bold tracking-wide text-brand-muted">SERVIÇO (PADRÃO)</div>
+              <div className="font-semibold text-brand-text text-base mt-0.5">{servicoSel?.nome || "Acupuntura"}</div>
+            </div>
+            <div className="text-xs text-brand-muted">{servicoSel?.tempoMedio ?? 50} min</div>
+          </div>
 
           {servicoSel && (
-            <Secao numero={2} titulo="Escolha o profissional">
+            <Secao numero={1} titulo="Escolha o profissional">
               {carregandoFuncionarios ? <p className="text-sm text-brand-muted">Carregando profissionais...</p> : (
                 <div className="grid gap-2 sm:grid-cols-2">
                   {funcionarios.map((funcionario) => (
@@ -166,7 +165,7 @@ export function AgendarConsulta() {
 
           {funcionarioSel && (
         <div>
-          <Secao numero={1} titulo="Escolha um dia disponível no calendário">
+          <Secao numero={2} titulo="Escolha um dia disponível no calendário">
             <CalendarioMensal
               mesRef={mesRef}
               onMudarMes={setMesRef}
@@ -182,6 +181,7 @@ export function AgendarConsulta() {
           </Secao>
         </div>
           )}
+      </div>
       </div>
 
       {/* Modal: horários disponíveis para o dia selecionado */}
