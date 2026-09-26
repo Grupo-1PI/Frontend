@@ -194,7 +194,7 @@ function LoginCadastro({ initialMode = "login" }) {
       await cadastrar(payload);
       // Após cadastrar, loga automaticamente com as credenciais recém-criadas.
       await login(form.emailCadastro, form.senhaCadastro);
-      navigate("/agendarConsulta");
+      navigate("/meusAgendamentos");
     } catch (err) {
       setErroGeral(
         err.response?.status === 400
@@ -217,7 +217,7 @@ function LoginCadastro({ initialMode = "login" }) {
       if (sessao.tipo === "FUNCIONARIO" || sessao.funcionarioId) {
         navigate("/agendaEquipe");
       } else {
-        navigate("/agendarConsulta");
+        navigate("/meusAgendamentos");
       }
     } catch (err) {
       setErroGeral(
