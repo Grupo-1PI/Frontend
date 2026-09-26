@@ -8,7 +8,7 @@ import { consultarCalendario } from "../services/agendamentos";
  * do back-end (GET /disponibilidade/calendario?mes=yyyy-MM) — este
  * componente não calcula nada, só busca e exibe.
  */
-function CalendarioMensal({ mesRef, onMudarMes, dataSel, onSelecionarDia }) {
+function CalendarioMensal({ mesRef, onMudarMes, dataSel, onSelecionarDia, servicoId, funcionarioId }) {
   const [statusPorDia, setStatusPorDia] = useState({});
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
@@ -17,7 +17,7 @@ function CalendarioMensal({ mesRef, onMudarMes, dataSel, onSelecionarDia }) {
     let cancelado = false;
     setCarregando(true);
     setErro(null);
-    consultarCalendario(mesRef.slice(0, 7))
+    consultarCalendario(mesRef.slice(0, 7), servicoId, funcionarioId)
       .then((dias) => {
         if (cancelado) return;
         const mapa = {};
@@ -35,7 +35,7 @@ function CalendarioMensal({ mesRef, onMudarMes, dataSel, onSelecionarDia }) {
     return () => {
       cancelado = true;
     };
-  }, [mesRef]);
+  }, [mesRef, servicoId, funcionarioId]);
 
   const primeiroDia = primeiroDiaDoMes(mesRef);
   const offsetSemana = new Date(primeiroDia + "T00:00:00").getDay(); // 0=Dom

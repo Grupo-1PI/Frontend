@@ -1,7 +1,9 @@
 import axios from "axios";
 
 export const api = axios.create({
-    baseURL:import.meta.env.VITE_API_URL,
+    // Em producao a API e entregue pelo mesmo ALB em /api. O .env local ainda
+    // pode definir VITE_API_URL para apontar para uma API local.
+    baseURL: import.meta.env.VITE_API_URL || "/api",
     withCredentials: true
 })
 

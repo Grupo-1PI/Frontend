@@ -8,7 +8,7 @@ import Secao from "../components/Secao";
 import Linha from "../components/Linha";
 import CalendarioMensal from "../components/CalendarioMensal";
 import { getUsuarioLogado, logout } from "../services/auth";
-import { consultarHorarios, criarAgendamento } from "../services/agendamentos";
+import { consultarHorarios, criarAgendamento, listarServicos, listarFuncionariosPorServico } from "../services/agendamentos";
 import { primeiroDiaDoMes, todayISO, combinarDataHora, formatDateLong, VALOR_RESERVA } from "../utils/agenda";
 
 export function AgendarConsulta() {
@@ -16,6 +16,10 @@ export function AgendarConsulta() {
   const usuario = getUsuarioLogado();
 
   const [dataSel, setDataSel] = useState(null);
+  const [funcionarios, setFuncionarios] = useState([]);
+  const [servicoSel, setServicoSel] = useState(null);
+  const [funcionarioSel, setFuncionarioSel] = useState(null);
+  const [carregandoFuncionarios, setCarregandoFuncionarios] = useState(false);
   const [mesRef, setMesRef] = useState(primeiroDiaDoMes(todayISO()));
   const [horarios, setHorarios] = useState([]);
   const [carregandoHorarios, setCarregandoHorarios] = useState(false);
@@ -33,11 +37,32 @@ export function AgendarConsulta() {
   }, [usuario, navigate]);
 
   useEffect(() => {
+    listarServicos()
+      .then((res) => {
+        const acupuntura = (res || []).find((s) => s.nome.toLowerCase().includes("acupuntura")) || res?.[0];
+        if (acupuntura) {
+          setServicoSel(acupuntura);
+        }
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!servicoSel) return;
+    setCarregandoFuncionarios(true);
+    setFuncionarios([]);
+    setFuncionarioSel(null);
+    setDataSel(null);
+    listarFuncionariosPorServico(servicoSel.id)
+      .then(setFuncionarios)
+      .finally(() => setCarregandoFuncionarios(false));
+  }, [servicoSel]);
+
+  useEffect(() => {
     if (!dataSel) return;
     let cancelado = false;
     setCarregandoHorarios(true);
     setErroHorarios(null);
-    consultarHorarios(dataSel)
+    consultarHorarios(dataSel, servicoSel.id, funcionarioSel.id)
       .then((res) => {
         if (!cancelado) setHorarios((res || []).filter((h) => h.disponivel));
       })
@@ -50,7 +75,7 @@ export function AgendarConsulta() {
     return () => {
       cancelado = true;
     };
-  }, [dataSel]);
+  }, [dataSel, servicoSel, funcionarioSel]);
 
   function resetFluxo() {
     setHorarioSel(null);
@@ -71,18 +96,18 @@ export function AgendarConsulta() {
       // Duração padrão de 1h para o bloco de reserva — o procedimento real
       // (e portanto a duração final) é definido pela clínica depois, junto
       // com o profissional e a sala que vão atender.
-      const [h, m] = horarioSel.split(":").map(Number);
-      const fimMin = h * 60 + m + 60;
+      const [h, m] = horarioSel.horario.split(":").map(Number);
+      const fimMin = h * 60 + m + servicoSel.tempoMedio;
       const horaFim = `${String(Math.floor(fimMin / 60)).padStart(2, "0")}:${String(fimMin % 60).padStart(2, "0")}`;
 
       const novo = await criarAgendamento({
-        dataHoraInicio: combinarDataHora(dataSel, horarioSel),
+        dataHoraInicio: combinarDataHora(dataSel, horarioSel.horario),
         dataHoraFim: combinarDataHora(dataSel, horaFim),
         observacao: observacaoInput,
         clienteId: usuario.clienteId,
-        funcionarioId: 1,
-        salaId: 1,
-        servicoId: 1,
+        funcionarioId: funcionarioSel.id,
+        salaId: horarioSel.salaId,
+        servicoId: servicoSel.id,
       });
       setConfirmado(novo);
       setModalHorarios(false);
@@ -114,8 +139,33 @@ export function AgendarConsulta() {
           </p>
         </div>
 
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-brand-border bg-brand-surface p-4 flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-bold tracking-wide text-brand-muted">SERVIÇO (PADRÃO)</div>
+              <div className="font-semibold text-brand-text text-base mt-0.5">{servicoSel?.nome || "Acupuntura"}</div>
+            </div>
+            <div className="text-xs text-brand-muted">{servicoSel?.tempoMedio ?? 50} min</div>
+          </div>
+
+          {servicoSel && (
+            <Secao numero={1} titulo="Escolha o profissional">
+              {carregandoFuncionarios ? <p className="text-sm text-brand-muted">Carregando profissionais...</p> : (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {funcionarios.map((funcionario) => (
+                    <button key={funcionario.id} type="button" onClick={() => { setFuncionarioSel(funcionario); setDataSel(null); }} className={`rounded-xl border p-3 text-left ${funcionarioSel?.id === funcionario.id ? "border-brand-primary bg-brand-primary/5" : "border-brand-border"}`}>
+                      <div className="font-semibold text-brand-text">{funcionario.nome}</div>
+                      <div className="text-xs text-brand-muted">{funcionario.especialidades?.join(", ")}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </Secao>
+          )}
+
+          {funcionarioSel && (
         <div>
-          <Secao numero={1} titulo="Escolha um dia disponível no calendário">
+          <Secao numero={2} titulo="Escolha um dia disponível no calendário">
             <CalendarioMensal
               mesRef={mesRef}
               onMudarMes={setMesRef}
@@ -125,16 +175,20 @@ export function AgendarConsulta() {
                 setHorarioSel(null);
                 setModalHorarios(true);
               }}
+              servicoId={servicoSel.id}
+              funcionarioId={funcionarioSel.id}
             />
           </Secao>
         </div>
+          )}
+      </div>
       </div>
 
       {/* Modal: horários disponíveis para o dia selecionado */}
       {modalHorarios && dataSel && (
         <Modal onClose={() => setModalHorarios(false)}>
           <h3 className="font-heading pr-6 text-xl font-semibold text-brand-text">Horários disponíveis</h3>
-          <div className="mt-1 mb-5 text-[13.5px] capitalize text-brand-muted">Para o dia {formatDateLong(dataSel)}</div>
+          <div className="mt-1 mb-5 text-[13.5px] capitalize text-brand-muted">Para {formatDateLong(dataSel)}</div>
 
           {carregandoHorarios ? (
             <div className="py-4 text-sm text-brand-muted">Carregando horários...</div>
@@ -148,9 +202,9 @@ export function AgendarConsulta() {
                 <button
                   key={h.horario}
                   type="button"
-                  onClick={() => setHorarioSel(h.horario)}
+                  onClick={() => setHorarioSel(h)}
                   className={`rounded-xl border px-2 py-3 text-sm font-semibold transition ${
-                    horarioSel === h.horario
+                    horarioSel?.horario === h.horario
                       ? "border-brand-primary bg-brand-primary text-white"
                       : "border-brand-border bg-brand-surface text-brand-text hover:border-brand-primary/50"
                   }`}
