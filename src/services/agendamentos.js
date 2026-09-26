@@ -10,8 +10,8 @@ import { api } from "../provider/api";
  * status esperado do back-end (ajuste os valores aqui se o enum real for outro):
  * "DISPONIVEL" | "POUCAS_VAGAS" | "INDISPONIVEL" | "PASSADO"
  */
-export async function consultarCalendario(mesISO) {
-  const { data } = await api.get("/disponibilidade/calendario", { params: { mes: mesISO } });
+export async function consultarCalendario(mesISO, servicoId, funcionarioId) {
+  const { data } = await api.get("/disponibilidade/calendario", { params: { mes: mesISO, servicoId, funcionarioId } });
   return data;
 }
 
@@ -19,8 +19,8 @@ export async function consultarCalendario(mesISO) {
  * GET /disponibilidade/horarios?data=yyyy-MM-dd
  * Retorna HorarioDisponivelDto[]: { horario, disponivel }
  */
-export async function consultarHorarios(dataISO) {
-  const { data } = await api.get("/disponibilidade/horarios", { params: { data: dataISO } });
+export async function consultarHorarios(dataISO, servicoId, funcionarioId) {
+  const { data } = await api.get("/disponibilidade/horarios", { params: { data: dataISO, servicoId, funcionarioId } });
   return data;
 }
 
@@ -99,6 +99,11 @@ export async function listarSalas() {
 
 export async function listarFuncionarios() {
   const { data } = await api.get("/funcionarios");
+  return data;
+}
+
+export async function listarFuncionariosPorServico(servicoId) {
+  const { data } = await api.get("/disponibilidade/funcionarios", { params: { servicoId } });
   return data;
 }
 
