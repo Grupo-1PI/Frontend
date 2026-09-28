@@ -25,6 +25,33 @@ export function addMonths(dateStr, n) {
   return d.toISOString().slice(0, 10);
 }
 
+export function addDaysISO(dateStr, n) {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Retorna a data (ISO) da segunda-feira da semana que contém dateStr. */
+export function segundaFeiraDaSemana(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  const diaSemana = d.getDay(); // 0=Dom..6=Sáb
+  const offset = diaSemana === 0 ? -6 : 1 - diaSemana; // volta até a segunda
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Segunda a sexta (5 dias) a partir da segunda-feira informada. */
+export function diasUteisDaSemana(segundaISO) {
+  return Array.from({ length: 5 }, (_, i) => addDaysISO(segundaISO, i));
+}
+
+export function formatDiaCurto(dataISO) {
+  const d = new Date(dataISO + "T00:00:00");
+  const dia = DIAS_SEMANA_PT[d.getDay()];
+  const label = { SEG: "Segunda", TER: "Terça", QUA: "Quarta", QUI: "Quinta", SEX: "Sexta", SÁB: "Sábado", DOM: "Domingo" }[dia] || dia;
+  return { label, data: `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}` };
+}
+
 export function primeiroDiaDoMes(dateStr) {
   return dateStr.slice(0, 8) + "01";
 }
@@ -89,4 +116,5 @@ export const STATUS_ID = {
   CONFIRMADO: 2,
   CANCELADO: 3,
   FINALIZADO: 4,
+  PENDENTE: 5,
 };
