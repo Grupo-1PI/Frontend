@@ -4,6 +4,15 @@ import LoginCadastro from "./pages/LoginCadastro";
 import { AgendarConsulta } from "./pages/AgendarConsulta";
 import { MeusAgendamentos } from "./pages/MeusAgendamentos";
 import { AgendaEquipe } from "./pages/AgendaEquipe";
+import { GerenciamentoHub } from "./pages/GerenciamentoHub";
+import { GerenciamentoSalas } from "./pages/GerenciamentoSalas";
+import { GerenciamentoServicos } from "./pages/GerenciamentoServicos";
+import { GerenciamentoEspecialidades } from "./pages/GerenciamentoEspecialidades";
+import { GerenciamentoCargos } from "./pages/GerenciamentoCargos";
+import { GerenciamentoFuncionarios } from "./pages/GerenciamentoFuncionarios";
+import { DisponibilidadeEquipe } from "./pages/DisponibilidadeEquipe";
+import { DashboardGerencial } from "./pages/DashboardGerencial";
+import { AgendaClinica } from "./pages/AgendaClinica";
 import { Routes, Route, useLocation } from "react-router-dom";
 
 
@@ -32,6 +41,15 @@ function App() {
           <Route path="/agendarConsulta" element={<AgendarConsulta /> }/>
           <Route path="/meusAgendamentos" element={<MeusAgendamentos /> }/>
           <Route path="/agendaEquipe" element={<AgendaEquipe /> }/>
+          <Route path="/gerenciamento" element={<GerenciamentoHub />} />
+          <Route path="/gerenciamento/salas" element={<GerenciamentoSalas />} />
+          <Route path="/gerenciamento/servicos" element={<GerenciamentoServicos />} />
+          <Route path="/gerenciamento/especialidades" element={<GerenciamentoEspecialidades />} />
+          <Route path="/gerenciamento/cargos" element={<GerenciamentoCargos />} />
+          <Route path="/gerenciamento/funcionarios" element={<GerenciamentoFuncionarios />} />
+          <Route path="/disponibilidade" element={<DisponibilidadeEquipe />} />
+          <Route path="/dashboard" element={<DashboardGerencial />} />
+          <Route path="/agendamentos" element={<AgendaClinica />} />
         </Routes>
       </div>
     </>
