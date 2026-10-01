@@ -50,7 +50,7 @@ jobs:
           aws-session-token: ${{ inputs.aws_session_token }}
           aws-region: ${{ inputs.aws_region }}
 
-      # 3. Verifica a identidade da AWS
+      # 3. Verifica as credenciais
       - name: Verificar credenciais AWS
         run: |
           aws sts get-caller-identity
@@ -70,7 +70,7 @@ jobs:
             --repository-name "${{ inputs.ecr_repository }}" \
             --region "${{ inputs.aws_region }}"
 
-      # 6. Define endereço da imagem
+      # 6. Define o endereço da imagem
       - name: Definir imagem
         id: image
         run: |
@@ -82,8 +82,7 @@ jobs:
         with:
           context: .
           push: true
+          no-cache: true
           tags: |
             ${{ steps.image.outputs.image }}:latest
             ${{ steps.image.outputs.image }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
