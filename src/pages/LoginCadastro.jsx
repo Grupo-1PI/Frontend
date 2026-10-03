@@ -215,7 +215,7 @@ function LoginCadastro({ initialMode = "login" }) {
       const sessao = await login(form.emailLogin, form.senhaLogin);
       // "Usuário - Token" traz tipo (ex.: "CLIENTE"/"FUNCIONARIO"), clienteId e funcionarioId.
       if (sessao.tipo === "FUNCIONARIO" || sessao.funcionarioId) {
-        navigate("/agendaEquipe");
+        navigate("/agendamentos");
       } else {
         navigate("/meusAgendamentos");
       }

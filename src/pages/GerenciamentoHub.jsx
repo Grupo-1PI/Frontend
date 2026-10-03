@@ -2,22 +2,30 @@ import { useNavigate } from "react-router-dom";
 import AgendaHeader from "../components/AgendaHeader";
 import { Briefcase, Users, Star, DoorOpen, ClipboardList } from "lucide-react";
 import { getUsuarioLogado, logout } from "../services/auth";
+import {
+  podeGerenciarCargos,
+  podeGerenciarFuncionarios,
+  podeGerenciarEspecialidades,
+  podeGerenciarSalas,
+  podeGerenciarServicos,
+} from "../services/permissoes";
 
 export function GerenciamentoHub() {
   const navigate = useNavigate();
   const usuario = getUsuarioLogado();
 
+  // Cada card só aparece para quem tem acesso à tela correspondente.
   const cards = [
-    { title: "Cargos", path: "/gerenciamento/cargos", icon: Briefcase },
-    { title: "Funcionários", path: "/gerenciamento/funcionarios", icon: Users },
-    { title: "Especialidades", path: "/gerenciamento/especialidades", icon: Star },
-    { title: "Salas", path: "/gerenciamento/salas", icon: DoorOpen },
-    { title: "Serviços", path: "/gerenciamento/servicos", icon: ClipboardList },
-  ];
+    { title: "Cargos", path: "/gerenciamento/cargos", icon: Briefcase, mostrar: podeGerenciarCargos() },
+    { title: "Funcionários", path: "/gerenciamento/funcionarios", icon: Users, mostrar: podeGerenciarFuncionarios() },
+    { title: "Especialidades", path: "/gerenciamento/especialidades", icon: Star, mostrar: podeGerenciarEspecialidades() },
+    { title: "Salas", path: "/gerenciamento/salas", icon: DoorOpen, mostrar: podeGerenciarSalas() },
+    { title: "Serviços", path: "/gerenciamento/servicos", icon: ClipboardList, mostrar: podeGerenciarServicos() },
+  ].filter((card) => card.mostrar);
 
   return (
     <div className="min-h-screen bg-[#F5F0E6]">
-      <AgendaHeader nome={usuario?.nome ?? "Gestão"} subtitulo="Painel Administrativo" onSair={async () => { await logout(); navigate("/login"); }} />
+      <AgendaHeader nome={usuario?.nome ?? "Gestão"} subtitulo="Painel Administrativo" showNav={true} onSair={async () => { await logout(); navigate("/login"); }} />
 
       <div className="mx-auto max-w-5xl px-5 pb-20 pt-10">
         <h1 className="font-heading text-4xl font-bold text-[#333E33]">Gerenciamento</h1>

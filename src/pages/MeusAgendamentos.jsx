@@ -28,8 +28,6 @@ export function MeusAgendamentos() {
 
     let ativo = true;
 
-    setLoading(true);
-
     listarAgendamentosDoCliente(usuario.clienteId)
       .then((data) => {
         if (ativo) setAgendamentos(data);
@@ -153,14 +151,14 @@ export function MeusAgendamentos() {
             rel="noopener noreferrer"
             className="btn-login mb-2.5 flex w-full items-center justify-center gap-2"
           >
-            <MessageCircle size={16} /> Ir para o WhatsApp
+            <MessageCircle size={16} /> Entrar em contato
           </a>
           <button
             type="button"
             onClick={() => setCancelamentoSelecionado(null)}
             className="w-full rounded-lg border border-brand-border py-3 text-sm font-semibold text-brand-text transition hover:bg-brand-bg"
           >
-            Voltar
+            Entendi
           </button>
         </Modal>
       )}

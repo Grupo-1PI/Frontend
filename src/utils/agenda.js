@@ -47,6 +47,20 @@ export function combinarDataHora(dataISO, horaHHmm) {
   return `${dataISO}T${horaHHmm}:00`;
 }
 
+const doisDigitos = (n) => String(n).padStart(2, "0");
+
+/**
+ * Serializa uma Date como "yyyy-MM-ddTHH:mm:ss" no fuso LOCAL do navegador.
+ * NÃO usar toISOString() aqui: ele converte para UTC e, no fuso do Brasil
+ * (-03h), um horário 08:00 seria enviado como 11:00 para o back-end.
+ */
+export function formatarDataHoraLocal(data) {
+  return (
+    `${data.getFullYear()}-${doisDigitos(data.getMonth() + 1)}-${doisDigitos(data.getDate())}` +
+    `T${doisDigitos(data.getHours())}:${doisDigitos(data.getMinutes())}:${doisDigitos(data.getSeconds())}`
+  );
+}
+
 export function extrairData(dataHoraISO) {
   return dataHoraISO.slice(0, 10);
 }
@@ -81,6 +95,83 @@ export function remarcacaoBloqueada(dataHoraInicioISO) {
 }
 
 export const VALOR_RESERVA = 50;
+
+/* ------------------------------------------------------------------ */
+/* Período da agenda (sempre domingo → sábado)                          */
+/* Datas tratadas como LOCAIS: usar Date(y, m, d) e non-UTC para       */
+/* serializar, senão o fuso pode deslocar o dia em +/- um dia.         */
+/* ------------------------------------------------------------------ */
+
+export const DIAS_SEMANA_LONGA_PT = [
+  "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado",
+];
+
+/** Date -> "yyyy-MM-dd" (local, sem passar por UTC). */
+export function paraISO(data) {
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  const dia = String(data.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
+/** "yyyy-MM-dd" -> Date (meio-dia local para evitar DST). */
+export function deISO(iso) {
+  const [ano, mes, dia] = iso.split("-").map(Number);
+  return new Date(ano, mes - 1, dia, 12, 0, 0, 0);
+}
+
+export function addDiasISO(iso, quantidade) {
+  const d = deISO(iso);
+  d.setDate(d.getDate() + quantidade);
+  return paraISO(d);
+}
+
+/** Domingo anterior (ou o próprio dia) da data informada. */
+export function paraDomingo(iso) {
+  const d = deISO(iso);
+  d.setDate(d.getDate() - d.getDay());
+  return paraISO(d);
+}
+
+/** Sábado seguinte (ou o próprio dia) da data informada. */
+export function paraSabado(iso) {
+  const d = deISO(iso);
+  d.setDate(d.getDate() + (6 - d.getDay()));
+  return paraISO(d);
+}
+
+/** Semana corrente: domingo → sábado. */
+export function semanaAtual() {
+  const hoje = paraISO(new Date());
+  return { inicio: paraDomingo(hoje), fim: paraSabado(hoje) };
+}
+
+/**
+ * Lista de dias de um período (inclusive), sempre começando em domingo.
+ * Retorna [{ nome, data, isoDate }] — formato consumido por <GradeMatricial>.
+ */
+export function diasDoPeriodo(periodo, maxDias = 62) {
+  const dias = [];
+  if (!periodo?.inicio) return dias;
+  const fim = periodo.fim ?? paraSabado(periodo.inicio);
+  let atual = periodo.inicio;
+  while (atual <= fim && dias.length < maxDias) {
+    dias.push({
+      nome: DIAS_SEMANA_LONGA_PT[deISO(atual).getDay()],
+      data: deISO(atual).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+      isoDate: atual,
+    });
+    atual = addDiasISO(atual, 1);
+  }
+  return dias;
+}
+
+/** "01/05/2026 - 30/05/2026" */
+export function formatarPeriodoBR(periodo) {
+  if (!periodo?.inicio) return "";
+  const fim = periodo.fim ?? paraSabado(periodo.inicio);
+  return `${deISO(periodo.inicio).toLocaleDateString("pt-BR")} - ${deISO(fim).toLocaleDateString("pt-BR")}`;
+}
 
 // IDs de status conhecidos, conforme seed do banco (tabela `status`).
 // Ajuste aqui se os IDs reais do back-end forem diferentes.
