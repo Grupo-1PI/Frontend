@@ -54,6 +54,22 @@
     }
   }
 
+  @keyframes alerta-entra {
+    from {
+      opacity: 0;
+      transform: translateY(-12px) scale(0.97);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .alerta-entra {
+    animation: alerta-entra 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
   .input-floating {
     @apply w-full h-14 rounded-[10px] border border-[#3B4538] bg-white px-4 pt-4 font-sans text-base text-[#3B4538] outline-none transition-all placeholder-transparent;
   }

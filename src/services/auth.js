@@ -46,3 +46,25 @@ export function getUsuarioLogado() {
 export function isAutenticado() {
   return !!localStorage.getItem(TOKEN_KEY);
 }
+
+export function temPermissao(permissaoRequerida) {
+  const usuario = getUsuarioLogado();
+  if (!usuario) return false;
+  const perms = usuario.permissoes || [];
+  
+  // Se tiver Acesso total, libera tudo
+  const temAcessoTotal = perms.some(p => 
+    (p.nome || "").toLowerCase().includes("acesso total") ||
+    (p.nome || "").toLowerCase().includes("crud_usuario")
+  );
+  if (temAcessoTotal) return true;
+
+  if (!permissaoRequerida) return true;
+
+  return perms.some(p => {
+    const nome = (p.nome || "").toLowerCase();
+    const req = (permissaoRequerida || "").toLowerCase();
+    return nome.includes(req) || req.includes(nome);
+  });
+}
+

@@ -15,8 +15,12 @@ function CalendarioMensal({ mesRef, onMudarMes, dataSel, onSelecionarDia, servic
 
   useEffect(() => {
     let cancelado = false;
-    setCarregando(true);
-    setErro(null);
+    queueMicrotask(() => {
+      if (!cancelado) {
+        setCarregando(true);
+        setErro(null);
+      }
+    });
     consultarCalendario(mesRef.slice(0, 7), servicoId, funcionarioId)
       .then((dias) => {
         if (cancelado) return;

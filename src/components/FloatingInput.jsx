@@ -7,6 +7,8 @@ function FloatingInput({
   onBlur,
   disabled = false,
   error,
+  maxLength,
+  autoComplete,
 }) {
   return (
     <div className="relative w-full">
@@ -18,6 +20,8 @@ function FloatingInput({
         onChange={onChange}
         onBlur={onBlur}
         disabled={disabled}
+        maxLength={maxLength}
+        autoComplete={autoComplete}
         placeholder=" "
         className={`input-floating peer ${error ? "border-red-500" : ""}`}
       />
