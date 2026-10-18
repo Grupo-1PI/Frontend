@@ -9,7 +9,7 @@ import {
   podeGerenciarAlgumCadastro,
 } from "../services/permissoes";
 
-export function AgendaHeader({ nome, subtitulo, onSair, showNav = false }) {
+export function AgendaHeader({ nome, subtitulo, onSair, showNav = false, variante }) {
   const location = useLocation();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -27,10 +27,10 @@ export function AgendaHeader({ nome, subtitulo, onSair, showNav = false }) {
 
   return (
     <>
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-[#E5E0D8] bg-[#F5F0E6] px-6 py-3.5 shadow-xs">
+      <header className={`sticky top-0 z-10 flex items-center justify-between border-b border-[#E5E0D8] bg-[#F5F0E6] px-6 py-3.5 shadow-xs ${variante === "dashboard" ? "dashboard-header" : ""}`}>
         <div className="flex items-center gap-8">
           <Link to="/">
-            <img src="/logo.svg" alt="Tao Tenshin" className="h-7 w-auto" />
+            <img src={variante === "dashboard" ? "/logo-branca.svg" : "/logo.svg"} alt="Tao Tenshin" className={variante === "dashboard" ? "h-10 w-auto" : "h-7 w-auto"} />
           </Link>
 
           {showNav && links.length > 0 && (
