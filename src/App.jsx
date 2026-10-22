@@ -9,12 +9,12 @@ import { GerenciamentoServicos } from "./pages/GerenciamentoServicos";
 import { GerenciamentoEspecialidades } from "./pages/GerenciamentoEspecialidades";
 import { GerenciamentoCargos } from "./pages/GerenciamentoCargos";
 import { GerenciamentoFuncionarios } from "./pages/GerenciamentoFuncionarios";
+import { GerenciamentoTriagem } from "./pages/GerenciamentoTriagem";
 import { DisponibilidadeEquipe } from "./pages/DisponibilidadeEquipe";
 import { DashboardGerencial } from "./pages/DashboardGerencial";
 import { AgendaClinica } from "./pages/AgendaClinica";
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Alertas from "./components/Alertas";
-
 
 function App() {
   const location = useLocation();
@@ -47,6 +47,7 @@ function App() {
           <Route path="/gerenciamento/especialidades" element={<GerenciamentoEspecialidades />} />
           <Route path="/gerenciamento/cargos" element={<GerenciamentoCargos />} />
           <Route path="/gerenciamento/funcionarios" element={<GerenciamentoFuncionarios />} />
+          <Route path="/gerenciamento/triagem" element={<GerenciamentoTriagem />} />
           <Route path="/disponibilidade" element={<DisponibilidadeEquipe />} />
           <Route path="/dashboard" element={<DashboardGerencial />} />
           <Route path="/agendamentos" element={<AgendaClinica />} />
