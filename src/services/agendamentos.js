@@ -139,6 +139,53 @@ export async function listarFuncionariosPorServico(servicoId) {
   return data;
 }
 
+export async function listarFuncionariosPorEspecialidade(especialidadeId) {
+  const { data } = await api.get("/disponibilidade/funcionarios/especialidade", { params: { especialidadeId } });
+  return data;
+}
+
+/* ------------------------------------------------------------------ */
+/* Triagem Dinâmica                                                    */
+/* ------------------------------------------------------------------ */
+
+export async function iniciarTriagem() {
+  const { data } = await api.get("/triagem/iniciar");
+  return data;
+}
+
+export async function responderTriagem(perguntaId, resposta) {
+  const { data } = await api.post("/triagem/responder", { perguntaId, resposta });
+  return data;
+}
+
+/* ------------------------------------------------------------------ */
+/* Triagem Admin (CRUD)                                                */
+/* ------------------------------------------------------------------ */
+
+export async function listarTriagemPerguntas() {
+  const { data } = await api.get("/triagem");
+  return data;
+}
+
+export async function buscarTriagemPergunta(id) {
+  const { data } = await api.get(`/triagem/${id}`);
+  return data;
+}
+
+export async function criarTriagemPergunta(payload) {
+  const { data } = await api.post("/triagem", payload);
+  return data;
+}
+
+export async function atualizarTriagemPergunta(id, payload) {
+  const { data } = await api.put(`/triagem/${id}`, payload);
+  return data;
+}
+
+export async function deletarTriagemPergunta(id) {
+  await api.delete(`/triagem/${id}`);
+}
+
 export async function listarEspecialidades() {
   const { data } = await api.get("/especialidades");
   return data;
