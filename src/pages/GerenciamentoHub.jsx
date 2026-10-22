@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import AgendaHeader from "../components/AgendaHeader";
-import { Briefcase, Users, Star, DoorOpen, ClipboardList } from "lucide-react";
+import { Briefcase, Users, Star, DoorOpen, ClipboardList, HelpCircle } from "lucide-react";
 import { getUsuarioLogado, logout } from "../services/auth";
 import {
   podeGerenciarCargos,
@@ -8,6 +8,7 @@ import {
   podeGerenciarEspecialidades,
   podeGerenciarSalas,
   podeGerenciarServicos,
+  podeGerenciarAgendamentos,
 } from "../services/permissoes";
 
 export function GerenciamentoHub() {
@@ -21,6 +22,7 @@ export function GerenciamentoHub() {
     { title: "Especialidades", path: "/gerenciamento/especialidades", icon: Star, mostrar: podeGerenciarEspecialidades() },
     { title: "Salas", path: "/gerenciamento/salas", icon: DoorOpen, mostrar: podeGerenciarSalas() },
     { title: "Serviços", path: "/gerenciamento/servicos", icon: ClipboardList, mostrar: podeGerenciarServicos() },
+    { title: "Triagem Dinâmica", path: "/gerenciamento/triagem", icon: HelpCircle, mostrar: podeGerenciarAgendamentos() },
   ].filter((card) => card.mostrar);
 
   return (

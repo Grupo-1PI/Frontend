@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Calendar, CalendarPlus, CheckCircle2, Info } from "lucide-react";
+import { Calendar, CalendarPlus, CheckCircle2, Info, ChevronDown, Sparkles, HelpCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 import Modal from "../components/Modal";
@@ -7,19 +7,27 @@ import AgendaHeader from "../components/AgendaHeader";
 import Secao from "../components/Secao";
 import Linha from "../components/Linha";
 import CalendarioMensal from "../components/CalendarioMensal";
+import Triagem from "../components/Triagem";
 import { getUsuarioLogado, logout } from "../services/auth";
-import { consultarHorarios, criarAgendamento, listarServicos, listarFuncionariosPorServico } from "../services/agendamentos";
+import { consultarHorarios, criarAgendamento, listarServicos, listarFuncionariosPorServico, listarFuncionariosPorEspecialidade } from "../services/agendamentos";
 import { primeiroDiaDoMes, todayISO, combinarDataHora, formatDateLong, VALOR_RESERVA } from "../utils/agenda";
 
 export function AgendarConsulta() {
   const navigate = useNavigate();
   const usuario = getUsuarioLogado();
 
-  const [dataSel, setDataSel] = useState(null);
-  const [funcionarios, setFuncionarios] = useState([]);
+  // Estados da triagem
+  const [etapa, setEtapa] = useState("agendamento"); // "agendamento" | "triagem"
+  const [especialidadeTriagem, setEspecialidadeTriagem] = useState(null);
+
+  // Estados do fluxo de agendamento
+  const [servicos, setServicos] = useState([]);
   const [servicoSel, setServicoSel] = useState(null);
+  const [funcionarios, setFuncionarios] = useState([]);
   const [funcionarioSel, setFuncionarioSel] = useState(null);
   const [carregandoFuncionarios, setCarregandoFuncionarios] = useState(false);
+  const [carregandoServicoTriagem, setCarregandoServicoTriagem] = useState(false);
+  const [dataSel, setDataSel] = useState(null);
   const [mesRef, setMesRef] = useState(primeiroDiaDoMes(todayISO()));
   const [horarios, setHorarios] = useState([]);
   const [carregandoHorarios, setCarregandoHorarios] = useState(false);
@@ -36,42 +44,87 @@ export function AgendarConsulta() {
     if (!usuario) navigate("/login");
   }, [usuario, navigate]);
 
+  // Carregar serviços no mount (pre-load)
   useEffect(() => {
-    listarServicos()
-      .then((res) => {
-        const acupuntura = (res || []).find((s) => s.nome.toLowerCase().includes("acupuntura")) || res?.[0];
-        if (acupuntura) {
-          setServicoSel(acupuntura);
-        }
-      });
+    listarServicos().then((res) => setServicos(res || []));
   }, []);
 
+  // Auto-selecionar serviço quando especialidadeTriagem mudar (síncrono, sem API call)
   useEffect(() => {
-    if (!servicoSel) return;
+    if (!especialidadeTriagem) {
+      setCarregandoServicoTriagem(false);
+      return;
+    }
+    setCarregandoServicoTriagem(true);
+    const servicoEspecialidade = servicos.find((s) =>
+      s.especialidadesIds?.includes(especialidadeTriagem.id)
+    );
+    if (servicoEspecialidade) {
+      setServicoSel(servicoEspecialidade);
+    }
+    setCarregandoServicoTriagem(false);
+  }, [especialidadeTriagem, servicos]);
+
+  // Carregar funcionários quando especialidade da triagem OU serviço mudar
+  useEffect(() => {
+    // Se veio da triagem: precisa ter servicoSel (auto-selecionado) para carregar
+    // Se não veio da triagem: precisa ter serviço selecionado manualmente
+    if (especialidadeTriagem && !servicoSel) {
+      // Aguarda servicoSel ser definido (auto-seleção da triagem)
+      return;
+    }
+    if (!especialidadeTriagem && !servicoSel) {
+      setFuncionarios([]);
+      setFuncionarioSel(null);
+      setDataSel(null);
+      return;
+    }
+
     setCarregandoFuncionarios(true);
     setFuncionarios([]);
     setFuncionarioSel(null);
     setDataSel(null);
-    listarFuncionariosPorServico(servicoSel.id)
-      .then(setFuncionarios)
-      .finally(() => setCarregandoFuncionarios(false));
-  }, [servicoSel]);
+
+    const carregar = async () => {
+      try {
+        let lista = [];
+        if (especialidadeTriagem) {
+          // Fluxo triagem: profissionais da especialidade recomendada
+          lista = await listarFuncionariosPorEspecialidade(especialidadeTriagem.id);
+        } else if (servicoSel) {
+          // Fluxo sem triagem: profissionais do serviço
+          lista = await listarFuncionariosPorServico(servicoSel.id);
+        }
+        setFuncionarios(lista);
+      } catch (err) {
+        console.error("Erro ao carregar funcionários:", err);
+        setFuncionarios([]);
+      } finally {
+        setCarregandoFuncionarios(false);
+      }
+    };
+
+    carregar();
+  }, [servicoSel, especialidadeTriagem]);
 
   useEffect(() => {
     if (!dataSel) return;
     let cancelado = false;
     setCarregandoHorarios(true);
     setErroHorarios(null);
-    consultarHorarios(dataSel, servicoSel.id, funcionarioSel.id)
-      .then((res) => {
-        if (!cancelado) setHorarios((res || []).filter((h) => h.disponivel));
-      })
-      .catch((err) => {
-        if (!cancelado) setErroHorarios(err);
-      })
-      .finally(() => {
-        if (!cancelado) setCarregandoHorarios(false);
-      });
+    // Precisa ter servicoSel (auto-selecionado na triagem) e funcionarioSel
+    if (servicoSel && funcionarioSel) {
+      consultarHorarios(dataSel, servicoSel.id, funcionarioSel.id)
+        .then((res) => {
+          if (!cancelado) setHorarios((res || []).filter((h) => h.disponivel));
+        })
+        .catch((err) => {
+          if (!cancelado) setErroHorarios(err);
+        })
+        .finally(() => {
+          if (!cancelado) setCarregandoHorarios(false);
+        });
+    }
     return () => {
       cancelado = true;
     };
@@ -88,16 +141,30 @@ export function AgendarConsulta() {
     setErroReserva(null);
   }
 
+  function handleTriagemConcluir(especialidade) {
+    setEspecialidadeTriagem(especialidade);
+    setEtapa("agendamento");
+  }
+
+  function handleTriagemVoltar() {
+    setEtapa("agendamento");
+  }
+
+  function abrirTriagem() {
+    setEtapa("triagem");
+  }
+
   async function confirmarReserva() {
     if (!horarioSel || salvando) return;
+    if (!servicoSel) {
+      setErroReserva("Erro interno: serviço não definido.");
+      return;
+    }
     setSalvando(true);
     setErroReserva(null);
     try {
-      // Duração padrão de 1h para o bloco de reserva — o procedimento real
-      // (e portanto a duração final) é definido pela clínica depois, junto
-      // com o profissional e a sala que vão atender.
       const [h, m] = horarioSel.horario.split(":").map(Number);
-      const fimMin = h * 60 + m + servicoSel.tempoMedio;
+      const fimMin = h * 60 + m + (servicoSel.tempoMedio || 60);
       const horaFim = `${String(Math.floor(fimMin / 60)).padStart(2, "0")}:${String(fimMin % 60).padStart(2, "0")}`;
 
       const novo = await criarAgendamento({
@@ -123,9 +190,39 @@ export function AgendarConsulta() {
     }
   }
 
+  const fluxoTriagem = !!especialidadeTriagem;
+
+  // TELA DE TRIAGEM
+  if (etapa === "triagem") {
+    return (
+      <div className="min-h-screen bg-brand-bg">
+        <AgendaHeader
+          nome={usuario?.nome ?? "Paciente"}
+          subtitulo="Área do paciente"
+          onSair={async () => {
+            await logout();
+            navigate("/login");
+          }}
+        />
+        <div className="mx-auto max-w-2xl px-5 pb-20 pt-7">
+          <AbaNav ativa="agendar" />
+          <Triagem onConcluir={handleTriagemConcluir} onVoltar={handleTriagemVoltar} />
+        </div>
+      </div>
+    );
+  }
+
+  // TELA DE AGENDAMENTO
   return (
     <div className="min-h-screen bg-brand-bg">
-      <AgendaHeader nome={usuario?.nome ?? "Paciente"} subtitulo="Área do paciente" onSair={async () => { await logout(); navigate("/login"); }} />
+      <AgendaHeader
+        nome={usuario?.nome ?? "Paciente"}
+        subtitulo="Área do paciente"
+        onSair={async () => {
+          await logout();
+          navigate("/login");
+        }}
+      />
 
       <div className="mx-auto max-w-3xl px-5 pb-20 pt-7">
         <AbaNav ativa="agendar" />
@@ -133,29 +230,113 @@ export function AgendarConsulta() {
         <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
           <Info size={18} className="mt-0.5 flex-shrink-0" />
           <p className="text-[13.5px] leading-relaxed">
-            A reserva do horário tem uma taxa de <strong>R$ {VALOR_RESERVA}</strong>. O profissional e o procedimento
+            A reserva do horário tem uma taxa de <strong>R\$ {VALOR_RESERVA}</strong>. O profissional e o procedimento
             serão definidos pela clínica conforme a disponibilidade e sua avaliação. Remarcações só podem ser feitas
             até <strong>1 dia antes</strong> da consulta.
           </p>
         </div>
 
-        <div className="space-y-6">
-          <div className="rounded-2xl border border-brand-border bg-brand-surface p-4 flex items-center justify-between">
+        {especialidadeTriagem && (
+          <div className="mb-6 flex items-center gap-3 rounded-xl bg-brand-primary/5 p-3 text-brand-primary">
+            <CheckCircle2 size={20} className="flex-shrink-0" />
             <div>
-              <div className="text-[11px] font-bold tracking-wide text-brand-muted">SERVIÇO (PADRÃO)</div>
-              <div className="font-semibold text-brand-text text-base mt-0.5">{servicoSel?.nome || "Acupuntura"}</div>
+              <div className="text-[11px] font-bold tracking-wide">ESPECIALIDADE DA TRIAGEM</div>
+              <div className="font-semibold text-base">{especialidadeTriagem.nome}</div>
             </div>
-            <div className="text-xs text-brand-muted">{servicoSel?.tempoMedio ?? 50} min</div>
+            <button
+              onClick={() => {
+                setEspecialidadeTriagem(null);
+                setEtapa("triagem");
+              }}
+              className="ml-auto text-sm text-brand-primary/70 hover:underline"
+            >
+              Refazer triagem
+            </button>
           </div>
+        )}
 
-          {servicoSel && (
-            <Secao numero={1} titulo="Escolha o profissional">
-              {carregandoFuncionarios ? <p className="text-sm text-brand-muted">Carregando profissionais...</p> : (
+        <div className="space-y-6">
+          {/* Seleção de Serviço */}
+          <Secao numero={fluxoTriagem ? 2 : 1} titulo="Escolha o serviço">
+            {servicos.length === 0 ? (
+              <p className="text-sm text-brand-muted">Carregando serviços...</p>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {servicos.map((servico) => (
+                  <button
+                    key={servico.id}
+                    type="button"
+                    onClick={() => {
+                      setServicoSel(servico);
+                      setFuncionarioSel(null);
+                      setDataSel(null);
+                    }}
+                    className={`rounded-xl border p-3 text-left transition ${
+                      servicoSel?.id === servico.id
+                        ? "border-brand-primary bg-brand-primary/5"
+                        : "border-brand-border hover:border-brand-primary/50"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-semibold text-brand-text">{servico.nome}</div>
+                        <div className="text-xs text-brand-muted">
+                          R\$ {servico.valor?.toFixed(2).replace(".", ",")} • {servico.tempoMedio || 50} min
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                        className="flex-shrink-0 text-brand-muted hover:text-brand-text"
+                      >
+                        <ChevronDown size={16} />
+                      </button>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </Secao>
+
+          {/* Seleção de Profissional */}
+          {(fluxoTriagem || servicoSel) && (
+            <Secao numero={fluxoTriagem ? 1 : 2} titulo={fluxoTriagem ? "Escolha o especialista" : "Escolha o profissional"}>
+              {fluxoTriagem && carregandoServicoTriagem && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="flex flex-col items-center gap-3 text-brand-muted">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-primary border-t-transparent" />
+                    <p className="text-sm">Carregando especialistas da especialidade...</p>
+                  </div>
+                </div>
+              )}
+              {carregandoFuncionarios ? (
+                <p className="text-sm text-brand-muted">Carregando especialistas...</p>
+              ) : funcionarios.length === 0 ? (
+                <p className="text-sm text-brand-muted">
+                  Nenhum {fluxoTriagem ? "especialista" : "profissional"} disponível para esta {fluxoTriagem ? "especialidade" : "serviço"}.
+                </p>
+              ) : (
                 <div className="grid gap-2 sm:grid-cols-2">
                   {funcionarios.map((funcionario) => (
-                    <button key={funcionario.id} type="button" onClick={() => { setFuncionarioSel(funcionario); setDataSel(null); }} className={`rounded-xl border p-3 text-left ${funcionarioSel?.id === funcionario.id ? "border-brand-primary bg-brand-primary/5" : "border-brand-border"}`}>
+                    <button
+                      key={funcionario.id}
+                      type="button"
+                      onClick={() => {
+                        setFuncionarioSel(funcionario);
+                        setDataSel(null);
+                      }}
+                      className={`rounded-xl border p-3 text-left ${
+                        funcionarioSel?.id === funcionario.id
+                          ? "border-brand-primary bg-brand-primary/5"
+                          : "border-brand-border"
+                      }`}
+                    >
                       <div className="font-semibold text-brand-text">{funcionario.nome}</div>
-                      <div className="text-xs text-brand-muted">{funcionario.especialidades?.join(", ")}</div>
+                      <div className="text-xs text-brand-muted">
+                        {funcionario.especialidades?.join(", ") || "Sem especialidade"}
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -163,25 +344,26 @@ export function AgendarConsulta() {
             </Secao>
           )}
 
+          {/* Calendário */}
           {funcionarioSel && (
-        <div>
-          <Secao numero={2} titulo="Escolha um dia disponível no calendário">
-            <CalendarioMensal
-              mesRef={mesRef}
-              onMudarMes={setMesRef}
-              dataSel={dataSel}
-              onSelecionarDia={(d) => {
-                setDataSel(d);
-                setHorarioSel(null);
-                setModalHorarios(true);
-              }}
-              servicoId={servicoSel.id}
-              funcionarioId={funcionarioSel.id}
-            />
-          </Secao>
-        </div>
+            <div>
+              <Secao numero={fluxoTriagem ? 2 : 3} titulo="Escolha um dia disponível no calendário">
+                <CalendarioMensal
+                  mesRef={mesRef}
+                  onMudarMes={setMesRef}
+                  dataSel={dataSel}
+                  onSelecionarDia={(d) => {
+                    setDataSel(d);
+                    setHorarioSel(null);
+                    setModalHorarios(true);
+                  }}
+                  servicoId={servicoSel.id}
+                  funcionarioId={funcionarioSel.id}
+                />
+              </Secao>
+            </div>
           )}
-      </div>
+        </div>
       </div>
 
       {/* Modal: horários disponíveis para o dia selecionado */}
@@ -229,7 +411,7 @@ export function AgendarConsulta() {
           <div className="mb-5 flex items-start gap-2.5 rounded-xl bg-amber-50 p-3 text-[12.5px] leading-relaxed text-amber-900">
             <Info size={15} className="mt-0.5 flex-shrink-0" />
             <span>
-              Ao reservar, será cobrada uma taxa de <strong>R$ {VALOR_RESERVA}</strong>. Remarcações só são permitidas
+              Ao reservar, será cobrada uma taxa de <strong>R\$ {VALOR_RESERVA}</strong>. Remarcações só são permitidas
               até <strong>1 dia antes</strong> do horário reservado.
             </span>
           </div>
@@ -240,7 +422,7 @@ export function AgendarConsulta() {
 
           <button
             type="button"
-            disabled={!horarioSel || salvando}
+            disabled={!horarioSel || salvando || !servicoSel}
             onClick={confirmarReserva}
             className="btn-login mb-2.5 w-full disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -279,6 +461,9 @@ export function AgendarConsulta() {
               label="Horário"
               valor={`${confirmado.dataHoraInicio?.slice(11, 16)} – ${confirmado.dataHoraFim?.slice(11, 16)}`}
             />
+            <Linha label="Especialista" valor={funcionarioSel?.nome} />
+            {fluxoTriagem && <Linha label="Especialidade" valor={especialidadeTriagem?.nome} />}
+            {!fluxoTriagem && <Linha label="Serviço" valor={servicoSel?.nome} />}
             <Linha label="Taxa de reserva" valor={`R$ ${VALOR_RESERVA.toFixed(2)}`} last />
           </div>
 
@@ -298,14 +483,25 @@ export function AgendarConsulta() {
           </button>
         </Modal>
       )}
-    </div>
-  );
-}
+    {/* Botão flutuante: "Não sabe qual serviço precisa?" */}
+    {etapa === "agendamento" && !fluxoTriagem && (
+      <button
+        onClick={abrirTriagem}
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-brand-primary px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-brand-primary/90 transition"
+      >
+        <HelpCircle size={18} />
+        Não sabe qual serviço precisa?
+      </button>
+    )}
 
-/**
- * Navegação compartilhada entre as duas telas do cliente.
- * Exportada para reaproveitar em MeusAgendamentos.jsx.
- */
+    {/* Tela de Triagem */}
+    {etapa === "triagem" && (
+      <Triagem onConcluir={handleTriagemConcluir} onVoltar={handleTriagemVoltar} />
+    )}
+  </div>
+  );
+};
+
 export function AbaNav({ ativa, contadorFuturos }) {
   return (
     <div className="mb-7 flex w-fit gap-1.5 rounded-full bg-brand-border/60 p-1.5">

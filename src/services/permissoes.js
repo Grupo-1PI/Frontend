@@ -41,10 +41,14 @@ export const podeGerenciarEspecialidades = () =>
   temPermissao("CRUD_AGENDAMENTO") ||
   temPermissao("Especialidades");
 
+export const podeGerenciarAgendamentos = () =>
+  temPermissao("CRUD_AGENDAMENTO") || temPermissao("Agendamentos");
+
 /** Só entra em Gerenciamento quem tem ao menos um dos cadastros. */
 export const podeGerenciarAlgumCadastro = () =>
   podeGerenciarCargos() ||
   podeGerenciarFuncionarios() ||
   podeGerenciarSalas() ||
   podeGerenciarServicos() ||
-  podeGerenciarEspecialidades();
+  podeGerenciarEspecialidades() ||
+  podeGerenciarAgendamentos();
