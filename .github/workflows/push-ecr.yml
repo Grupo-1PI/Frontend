@@ -3,21 +3,6 @@ name: Push Manual Frontend para AWS ECR
 on:
   workflow_dispatch:
     inputs:
-      aws_access_key_id:
-        description: 'AWS Access Key ID'
-        required: true
-        type: string
-
-      aws_secret_access_key:
-        description: 'AWS Secret Access Key'
-        required: true
-        type: string
-
-      aws_session_token:
-        description: 'AWS Session Token'
-        required: true
-        type: string
-
       aws_region:
         description: 'AWS Region'
         required: true
@@ -25,6 +10,7 @@ on:
         type: string
 
       ecr_repository:
+
         description: 'Nome do repositório no ECR'
         required: true
         default: 'tao-tenshin-frontend'
@@ -41,13 +27,13 @@ jobs:
         with:
           ref: production
 
-      # 2. Configura as credenciais da AWS
+      # 2. Configura as credenciais AWS a partir dos Secrets do repositório
       - name: Configurar AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ inputs.aws_access_key_id }}
-          aws-secret-access-key: ${{ inputs.aws_secret_access_key }}
-          aws-session-token: ${{ inputs.aws_session_token }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ inputs.aws_region }}
 
       # 3. Verifica as credenciais
@@ -80,7 +66,7 @@ jobs:
       - name: Build e Push da Imagem
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: Frontend/
           push: true
           no-cache: true
           tags: |
